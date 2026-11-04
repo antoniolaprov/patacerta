@@ -27,7 +27,7 @@ export function Layout() {
       </a>
       <header className="topbar">
         <NavLink to="/" className="brand" aria-label="PataCerta, início">
-          <img src="/favicon.svg" alt="" width={32} height={32} />
+          <img src="/logo-icon.png" alt="" width={32} height={32} />
           <span>PataCerta</span>
         </NavLink>
         <nav className="nav" aria-label="Principal">
@@ -52,7 +52,7 @@ export function Layout() {
 
       {!assistantOpen && (
         <button className="pata-fab" onClick={() => setAssistantOpen(true)} aria-label="Pergunte à Pata">
-          <img src="/favicon.svg" alt="" width={28} height={28} />
+          <img src="/logo-icon.png" alt="" width={28} height={28} />
           <span className="pata-fab__label">Pergunte à Pata</span>
         </button>
       )}

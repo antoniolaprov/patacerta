@@ -28,7 +28,7 @@ export function Login() {
   return (
     <div className="login">
       <section className="login__intro">
-        <img src="/favicon.svg" alt="" width={56} height={56} />
+        <img src="/logo-icon.png" alt="" width={56} height={56} />
         <h1>A carteirinha do seu pet, sempre com você.</h1>
         <p>
           Vacinas, consultas e banhos num só lugar. Agende em poucos toques e acompanhe o

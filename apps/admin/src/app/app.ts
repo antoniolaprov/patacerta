@@ -11,7 +11,7 @@ import { RealtimeService } from './core/realtime';
       <div class="shell">
         <aside class="sidebar">
           <a routerLink="/" class="brand">
-            <img src="favicon.svg" alt="" width="30" height="30" />
+            <img src="logo-icon.png" alt="" width="30" height="30" />
             <span>PataCerta <small>Clínica</small></span>
           </a>
           <nav aria-label="Principal">

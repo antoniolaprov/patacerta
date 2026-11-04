@@ -9,7 +9,7 @@ import { AuthService, errorMessage } from '../core/auth';
   template: `
     <div class="login">
       <form class="login__card" (ngSubmit)="submit()">
-        <img src="favicon.svg" alt="" width="48" height="48" />
+        <img src="logo-icon.png" alt="" width="48" height="48" />
         <h1>Painel da clínica</h1>
         <p class="muted">Agenda, prontuários e a assistente da equipe.</p>
         <label>

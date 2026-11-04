@@ -1,18 +1,19 @@
 :root {
-  --ink: #1f3a5f;
-  --ink-soft: #35557d;
-  --paper: #f7f9fb;
+  --ink: #2d1f10;
+  --ink-soft: #5c4127;
+  --paper: #f8f6f2;
   --surface: #ffffff;
-  --line: #dde4ec;
-  --text: #1a2433;
-  --muted: #5b6b7f;
-  --sticker: #f5c842;
-  --sticker-soft: #fdf3cf;
-  --ok: #2e7d5b;
-  --ok-soft: #e3f2ea;
+  --line: #e6e0d6;
+  --text: #2a2118;
+  --muted: #6e6354;
+  --sticker: #f4ca1d;
+  --sticker-soft: #fdf1c2;
+  --orange: #f98e2a;
+  --ok: #3d7a1c;
+  --ok-soft: #e8f5d8;
   --late: #c8413b;
   --late-soft: #fbe7e5;
-  --focus: #2f7de1;
+  --focus: #e07612;
 
   --font-display: 'Bricolage Grotesque', system-ui, sans-serif;
   --font-body: 'Atkinson Hyperlegible', system-ui, sans-serif;
@@ -27,17 +28,17 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --ink: #9cc0ec;
-    --ink-soft: #b9d3f2;
-    --paper: #111a26;
-    --surface: #182333;
-    --line: #2a384b;
-    --text: #e6edf5;
-    --muted: #9aabbf;
-    --sticker: #f5c842;
-    --sticker-soft: #3a3320;
-    --ok: #6cc79e;
-    --ok-soft: #1c3329;
+    --ink: #f4ca1d;
+    --ink-soft: #f7d75a;
+    --paper: #1f160b;
+    --surface: #2d1f10;
+    --line: #463420;
+    --text: #f3ede4;
+    --muted: #b9ab98;
+    --sticker: #f4ca1d;
+    --sticker-soft: #3e3014;
+    --ok: #98d54c;
+    --ok-soft: #26331a;
     --late: #f08a84;
     --late-soft: #3a2222;
     color-scheme: dark;
@@ -390,7 +391,7 @@ textarea:focus {
 }
 .status--confirmed {
   background: var(--sticker-soft);
-  color: #7a5b00;
+  color: #6b4f00;
 }
 .status--in_progress {
   background: var(--ink);
@@ -485,7 +486,7 @@ textarea:focus {
   padding: 28px;
   border-radius: 6px 22px 22px 6px;
   background: var(--surface);
-  border-left: 14px solid var(--ink);
+  border-left: 14px solid var(--orange);
   box-shadow: 0 1px 0 var(--line);
 }
 .stamps {
@@ -698,7 +699,7 @@ textarea:focus {
   background: var(--ink);
   color: var(--paper);
   font: 800 1rem var(--font-display);
-  box-shadow: 0 8px 24px rgb(31 58 95 / 0.3);
+  box-shadow: 0 8px 24px rgb(45 31 16 / 0.35);
   cursor: pointer;
 }
 .assistant {
@@ -893,7 +894,7 @@ textarea:focus {
   color: var(--text);
 }
 .dialog::backdrop {
-  background: rgb(10 20 35 / 0.45);
+  background: rgb(30 20 10 / 0.5);
 }
 .dialog__actions {
   display: flex;

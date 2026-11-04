@@ -1,19 +1,20 @@
 :root {
-  --ink: #1f3a5f;
-  --ink-deep: #172c48;
-  --ink-soft: #35557d;
-  --paper: #f4f6f9;
+  --ink: #2d1f10;
+  --ink-deep: #2d1f10;
+  --ink-soft: #5c4127;
+  --paper: #f6f4ef;
   --surface: #ffffff;
-  --line: #dde4ec;
-  --text: #1a2433;
-  --muted: #5b6b7f;
-  --sticker: #f5c842;
-  --sticker-soft: #fdf3cf;
-  --ok: #2e7d5b;
-  --ok-soft: #e3f2ea;
+  --line: #e6e0d6;
+  --text: #2a2118;
+  --muted: #6e6354;
+  --sticker: #f4ca1d;
+  --sticker-soft: #fdf1c2;
+  --orange: #f98e2a;
+  --ok: #3d7a1c;
+  --ok-soft: #e8f5d8;
   --late: #c8413b;
   --late-soft: #fbe7e5;
-  --focus: #2f7de1;
+  --focus: #e07612;
   --font-display: 'Bricolage Grotesque', system-ui, sans-serif;
   --font-body: 'Atkinson Hyperlegible', system-ui, sans-serif;
   color-scheme: light;
@@ -21,16 +22,17 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --ink: #9cc0ec;
-    --ink-deep: #0d1520;
-    --ink-soft: #b9d3f2;
-    --paper: #111a26;
-    --surface: #182333;
-    --line: #2a384b;
-    --text: #e6edf5;
-    --muted: #9aabbf;
-    --sticker-soft: #3a3320;
-    --ok-soft: #1c3329;
+    --ink: #f4ca1d;
+    --ink-deep: #170f06;
+    --ink-soft: #f7d75a;
+    --paper: #1f160b;
+    --surface: #2d1f10;
+    --line: #463420;
+    --text: #f3ede4;
+    --muted: #b9ab98;
+    --sticker-soft: #3e3014;
+    --ok: #98d54c;
+    --ok-soft: #26331a;
     --late: #f08a84;
     --late-soft: #3a2222;
     color-scheme: dark;
@@ -219,7 +221,7 @@ textarea:focus {
   height: 100dvh;
   padding: 20px 14px;
   background: var(--ink-deep);
-  color: #dbe6f3;
+  color: #f1e9dc;
 }
 .brand {
   display: flex;
@@ -233,7 +235,7 @@ textarea:focus {
 .brand small {
   display: block;
   font: 400 0.8rem var(--font-body);
-  color: #a9bdd6;
+  color: #c9b79c;
 }
 .sidebar nav {
   display: grid;
@@ -242,7 +244,7 @@ textarea:focus {
 .sidebar nav a {
   padding: 9px 12px;
   border-radius: 8px;
-  color: #c4d3e6;
+  color: #e3d6c2;
   font-weight: 700;
   text-decoration: none;
 }
@@ -262,11 +264,11 @@ textarea:focus {
 }
 .sidebar__foot .link-btn {
   justify-self: start;
-  color: #c4d3e6;
+  color: #e3d6c2;
 }
 .live {
   font-size: 0.8rem;
-  color: #a9bdd6;
+  color: #c9b79c;
 }
 .live::before {
   content: '';
@@ -352,11 +354,11 @@ textarea:focus {
   border-top-color: var(--sticker);
 }
 .column--in_progress {
-  border-top-color: var(--ink);
+  border-top-color: var(--orange);
   background: color-mix(in srgb, var(--ink) 8%, transparent);
 }
 .column--done {
-  border-top-color: var(--ok);
+  border-top-color: #98d54c;
 }
 .column h2 {
   display: flex;
@@ -532,7 +534,7 @@ textarea:focus {
   background: var(--surface);
 }
 .brief {
-  border: 2px solid var(--sticker);
+  border: 2px solid var(--orange);
 }
 .brief__head {
   display: flex;
