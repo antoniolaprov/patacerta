@@ -1,0 +1,82 @@
+name: patacerta
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_USER: patacerta
+      POSTGRES_PASSWORD: patacerta
+      POSTGRES_DB: patacerta
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U patacerta"]
+      interval: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 10
+
+  api:
+    build: ./apps/api
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://patacerta:patacerta@postgres:5432/patacerta
+      REDIS_URL: redis://redis:6379
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+
+  ai-service:
+    build: ./apps/ai-service
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://patacerta:patacerta@postgres:5432/patacerta
+      REDIS_URL: redis://redis:6379
+      OLLAMA_URL: http://ollama:11434
+    ports:
+      - "4000:4000"
+    volumes:
+      # Caches the embedding model between restarts.
+      - models:/app/node_modules/@huggingface/transformers/.cache
+    depends_on:
+      api: { condition: service_started }
+
+  web:
+    build:
+      context: ./apps/web
+      args:
+        VITE_API_URL: http://localhost:3000/api
+        VITE_AI_URL: http://localhost:4000
+    ports:
+      - "5173:80"
+
+  admin:
+    build: ./apps/admin
+    ports:
+      - "4200:80"
+
+  # Optional: run the assistant fully offline with an open model.
+  # docker compose --profile local-llm up, then set LLM_PROVIDER=ollama in .env
+  ollama:
+    image: ollama/ollama
+    profiles: ["local-llm"]
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama:/root/.ollama
+
+volumes:
+  pgdata:
+  models:
+  ollama:
