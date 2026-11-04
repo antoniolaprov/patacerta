@@ -1,0 +1,16 @@
+{
+  "name": "patacerta",
+  "private": true,
+  "description": "Pet shop e clínica veterinária com assistente de IA contextualizada (RAG)",
+  "scripts": {
+    "install:all": "npm install && npm --prefix apps/api install && npm --prefix apps/ai-service install && npm --prefix apps/web install && npm --prefix apps/admin install",
+    "infra": "docker compose up -d postgres redis",
+    "db:setup": "npm --prefix apps/api run db:migrate && npm --prefix apps/api run db:seed",
+    "dev": "concurrently -k -n api,ai,web,admin -c blue,yellow,green,magenta \"npm --prefix apps/api run start:dev\" \"npm --prefix apps/ai-service run dev\" \"npm --prefix apps/web run dev\" \"npm --prefix apps/admin start\"",
+    "test": "npm --prefix apps/api test && npm --prefix apps/ai-service test && npm --prefix apps/admin test -- --watch=false",
+    "build": "npm --prefix apps/api run build && npm --prefix apps/ai-service run build && npm --prefix apps/web run build && npm --prefix apps/admin run build"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
