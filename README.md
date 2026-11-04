@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/logo.png" alt="Logomarca do PataCerta: cachorro, gato e calopsita em formas arredondadas nas cores amarela, laranja e verde" width="360" />
+</p>
+
 # PataCerta
 
 Sistema de pet shop e clínica veterinária com uma assistente de IA que responde com base no histórico real de cada pet.
