@@ -19,12 +19,18 @@ const schema = z.object({
   EMBEDDINGS_PROVIDER: z.enum(['local', 'hash']).default('local'),
   EMBEDDING_MODEL: z.string().default('Xenova/paraphrase-multilingual-MiniLM-L12-v2'),
 
-  /** `anthropic` uses the Claude API; `ollama` runs an open model locally. */
-  LLM_PROVIDER: z.enum(['anthropic', 'ollama']).default('anthropic'),
+  /**
+   * `anthropic` uses the Claude API; `ollama` runs an open model locally;
+   * `openai` talks to any OpenAI-compatible endpoint (Groq, Gemini, OpenRouter...).
+   */
+  LLM_PROVIDER: z.enum(['anthropic', 'ollama', 'openai']).default('anthropic'),
   ANTHROPIC_API_KEY: z.string().optional(),
   LLM_MODEL: z.string().default('claude-sonnet-5-5'),
   OLLAMA_URL: z.string().default('http://localhost:11434'),
   OLLAMA_MODEL: z.string().default('qwen2.5:7b'),
+  OPENAI_BASE_URL: z.string().default('https://api.groq.com/openai/v1'),
+  OPENAI_API_KEY: z.string().optional(),
+  OPENAI_MODEL: z.string().default('openai/gpt-oss-120b'),
 
   RETRIEVAL_TOP_K: z.coerce.number().int().positive().default(8),
   REMINDER_INTERVAL_MIN: z.coerce.number().positive().default(60),

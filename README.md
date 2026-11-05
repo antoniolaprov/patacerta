@@ -14,7 +14,7 @@ O tutor agenda banho, consulta e vacina pelo app, acompanha o atendimento em tem
 
 - **IA contextualizada com os dados do sistema (RAG).** Cada consulta, vacina, banho e agendamento vira um trecho indexado com embeddings numa base vetorial (pgvector). A assistente busca os trechos relevantes, combina com fatos calculados via SQL e responde citando de onde tirou cada informação.
 - **Isolamento de dados na busca.** Um tutor nunca recupera registros de outra família, seja qual for a pergunta: o filtro por tutor é aplicado dentro da consulta vetorial e coberto por testes.
-- **Embeddings rodando localmente.** O modelo de embeddings (multilíngue, ótimo em português) roda no próprio servidor via ONNX. O modelo de linguagem é plugável: Claude pela API ou um modelo aberto local com Ollama, deixando tudo offline.
+- **Embeddings rodando localmente.** O modelo de embeddings (multilíngue, ótimo em português) roda no próprio servidor via ONNX. O modelo de linguagem é plugável: Claude pela API, qualquer API compatível com OpenAI (como Groq, com plano gratuito) ou um modelo aberto local com Ollama, deixando tudo offline.
 - **Arquitetura orientada a eventos.** A API publica mudanças numa fila (BullMQ) para indexação e em Redis pub/sub para notificações. O serviço de IA consome a fila e distribui os eventos por WebSocket, com o adaptador Redis do Socket.io para escalar em várias instâncias.
 - **Regras de negócio de verdade.** Capacidade por tipo de serviço, transação serializável contra dupla reserva do último horário, máquina de estados do atendimento e lembretes idempotentes de vacinas.
 
@@ -37,7 +37,7 @@ flowchart LR
         RD[("Redis<br/>fila + pub/sub")]
     end
 
-    LLM["Claude API<br/>ou Ollama local"]
+    LLM["Claude, Groq<br/>ou Ollama local"]
 
     WEB -- REST --> API
     ADM -- REST --> API
@@ -98,7 +98,7 @@ Pré-requisitos: Node 22+ e Docker.
 ### Tudo com Docker
 
 ```bash
-cp .env.example .env        # coloque sua ANTHROPIC_API_KEY ou use LLM_PROVIDER=ollama
+cp .env.example .env        # configure o modelo de linguagem (veja abaixo)
 docker compose up --build
 docker compose exec api node dist/db/seed.js
 ```
@@ -134,6 +134,7 @@ Todas usam a senha `patacerta123`.
 ### Modelo de linguagem
 
 - **Claude (padrão):** defina `ANTHROPIC_API_KEY` no `.env`.
+- **Grátis com Groq:** crie uma chave em [console.groq.com](https://console.groq.com) e use `LLM_PROVIDER=openai` com `OPENAI_API_KEY=<sua chave>`. O modelo padrão é o `openai/gpt-oss-120b`. Qualquer outra API compatível com OpenAI (Gemini, OpenRouter) funciona trocando `OPENAI_BASE_URL` e `OPENAI_MODEL`.
 - **Totalmente local:** `docker compose --profile local-llm up -d ollama`, depois `docker compose exec ollama ollama pull qwen2.5:7b` e `LLM_PROVIDER=ollama` no `.env`.
 
 ## Testes

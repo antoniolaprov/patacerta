@@ -64,8 +64,58 @@ class OllamaProvider implements LlmProvider {
   }
 }
 
+/**
+ * Any endpoint that speaks the OpenAI chat completions format. Defaults to Groq,
+ * which has a free tier; Gemini and OpenRouter work by changing the base URL.
+ */
+class OpenAICompatibleProvider implements LlmProvider {
+  readonly name = `openai:${config.OPENAI_MODEL}`;
+
+  async *stream({ system, messages, maxTokens = 1024 }: LlmRequest) {
+    const res = await fetch(`${config.OPENAI_BASE_URL.replace(/\/$/, '')}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        authorization: `Bearer ${config.OPENAI_API_KEY ?? ''}`,
+      },
+      body: JSON.stringify({
+        model: config.OPENAI_MODEL,
+        stream: true,
+        max_tokens: maxTokens,
+        temperature: 0.2,
+        messages: [{ role: 'system', content: system }, ...messages],
+      }),
+    });
+    if (!res.ok || !res.body) {
+      const detail = await res.text().catch(() => '');
+      throw new Error(`Provedor respondeu ${res.status}: ${detail.slice(0, 200)}`);
+    }
+
+    const decoder = new TextDecoder();
+    let buffer = '';
+    for await (const part of res.body as unknown as AsyncIterable<Uint8Array>) {
+      buffer += decoder.decode(part, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() ?? '';
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed.startsWith('data:')) continue;
+        const payload = trimmed.slice(5).trim();
+        if (payload === '[DONE]') return;
+        const data = JSON.parse(payload) as { choices?: { delta?: { content?: string | null } }[] };
+        const text = data.choices?.[0]?.delta?.content;
+        if (text) yield text;
+      }
+    }
+  }
+}
+
 export function createProvider(): LlmProvider {
   if (config.LLM_PROVIDER === 'ollama') return new OllamaProvider();
+  if (config.LLM_PROVIDER === 'openai') {
+    if (!config.OPENAI_API_KEY) console.warn('[llm] OPENAI_API_KEY ausente para o provedor compatível com OpenAI');
+    return new OpenAICompatibleProvider();
+  }
   if (!config.ANTHROPIC_API_KEY) {
     console.warn('[llm] ANTHROPIC_API_KEY ausente: configure a chave ou use LLM_PROVIDER=ollama');
   }
