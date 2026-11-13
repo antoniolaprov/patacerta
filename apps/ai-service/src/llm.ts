@@ -236,7 +236,9 @@ class OpenAICompatibleProvider implements LlmProvider {
         body: JSON.stringify({ ...body, ...this.extra }),
       });
       if ((res.status !== 429 && res.status !== 503) || attempt >= 5) return res;
-      const detail = await res.text().catch(() => '');
+      const detail = await res.clone().text().catch(() => '');
+      // No credit on the account is not a speed limit: waiting won't help.
+      if (/insufficient_quota|credit_balance/i.test(detail)) return res;
       const hinted = Number(res.headers.get('retry-after')) || Number(/try again in ([\d.]+)s/i.exec(detail)?.[1]);
       const waitMs = Math.min(Number.isFinite(hinted) && hinted > 0 ? hinted * 1000 + 300 : 2000 * (attempt + 1), 20_000);
       console.warn(`[llm] limite do provedor (${res.status}), nova tentativa em ${Math.round(waitMs / 100) / 10}s`);
