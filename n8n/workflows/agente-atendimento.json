@@ -1,6 +1,6 @@
 {
   "id": "PcAtendimento",
-  "name": "PataCerta Â· Agente de atendimento (WhatsApp)",
+  "name": "PataCerta · Agente de atendimento (WhatsApp)",
   "active": false,
   "settings": { "executionOrder": "v1", "timezone": "America/Recife" },
   "nodes": [
@@ -13,7 +13,7 @@
       "parameters": {
         "width": 1000,
         "height": 220,
-        "content": "## Agente de atendimento (WhatsApp)\nO tutor responde Ã  mensagem da clÃ­nica (aqui simulada pelo chat do n8n; em produÃ§Ã£o, a Evolution API ou a API oficial do WhatsApp entram no lugar do gatilho). O **Agente atendente** identifica o pet, consulta serviÃ§os e horÃ¡rios e agenda pela API da PataCerta, com as mesmas regras do app (capacidade, conflitos). Antes de agendar, ele confere as pendÃªncias do pet e oferece resolver na mesma visita (upsell), uma vez sÃ³.\nAbra o chat no botÃ£o **Open chat** abaixo."
+        "content": "## Agente de atendimento (WhatsApp)\nO tutor responde à mensagem da clínica (aqui simulada pelo chat do n8n; em produção, a Evolution API ou a API oficial do WhatsApp entram no lugar do gatilho). O **Agente atendente** identifica o pet, consulta serviços e horários e agenda pela API da PataCerta, com as mesmas regras do app (capacidade, conflitos). Antes de agendar, ele confere as pendências do pet e oferece resolver na mesma visita (upsell), uma vez só.\nAbra o chat no botão **Open chat** abaixo."
       }
     },
     {
@@ -50,7 +50,7 @@
         "promptType": "define",
         "text": "={{ $('Mensagem do tutor').item.json.chatInput }}",
         "options": {
-          "systemMessage": "=VocÃª Ã© a Pata, atendente da clÃ­nica PataCerta no WhatsApp. Hoje Ã© {{ $now.setZone('America/Recife').setLocale('pt-BR').toFormat(\"cccc, dd/MM/yyyy\") }} (data ISO {{ $now.setZone('America/Recife').toISODate() }}), fuso da clÃ­nica -03:00.\n\nComo atender:\n1. Descubra de qual pet o tutor estÃ¡ falando. Use buscar_pet com o nome; se houver mais de um, pergunte o nome do tutor.\n2. Para agendar: use listar_servicos para achar o servico_id, depois horarios_disponiveis com a data (AAAA-MM-DD; converta \"sÃ¡bado\", \"amanhÃ£\" etc.) e use em agendar exatamente um startsAt retornado. Se o pedido for claro (pet, serviÃ§o, dia e perÃ­odo), agende sem pedir confirmaÃ§Ã£o; se faltar algo, pergunte.\n3. Antes de confirmar, consulte pendencias e veja se esse pet tem vacina, vermÃ­fugo ou exame atrasado ou vencendo. Se tiver, ofereÃ§a UMA vez resolver na mesma visita, agendando o serviÃ§o extra logo depois. Se o tutor recusar, nÃ£o insista.\n4. Se uma ferramenta der erro (ex.: horÃ¡rio preenchido), explique de forma simples e ofereÃ§a outro horÃ¡rio.\n5. Depois de agendar, confirme em uma frase: serviÃ§o, pet, dia e hora.\n\nRegras: respostas curtas, tom caloroso, portuguÃªs do Brasil. Nunca faÃ§a diagnÃ³stico nem indique remÃ©dio ou dose. Se o tutor descrever uma emergÃªncia (convulsÃ£o, envenenamento, falta de ar, sangramento), oriente a ligar para a clÃ­nica imediatamente.",
+          "systemMessage": "=Você é a Pata, atendente da clínica PataCerta no WhatsApp. Hoje é {{ $now.setZone('America/Recife').setLocale('pt-BR').toFormat(\"cccc, dd/MM/yyyy\") }} (data ISO {{ $now.setZone('America/Recife').toISODate() }}), fuso da clínica -03:00.\n\nComo atender:\n1. Descubra de qual pet o tutor está falando. Use buscar_pet com o nome; se houver mais de um, pergunte o nome do tutor.\n2. Para agendar: use listar_servicos para achar o servico_id, depois horarios_disponiveis com a data (AAAA-MM-DD; converta \"sábado\", \"amanhã\" etc.) e use em agendar exatamente um startsAt retornado. Se o pedido for claro (pet, serviço, dia e período), agende sem pedir confirmação; se faltar algo, pergunte.\n3. Antes de confirmar, consulte pendencias e veja se esse pet tem vacina, vermífugo ou exame atrasado ou vencendo. Se tiver, ofereça UMA vez resolver na mesma visita, agendando o serviço extra logo depois. Se o tutor recusar, não insista.\n4. Se uma ferramenta der erro (ex.: horário preenchido), explique de forma simples e ofereça outro horário.\n5. Depois de agendar, confirme em uma frase: serviço, pet, dia e hora.\n\nRegras: respostas curtas, tom caloroso, português do Brasil. Nunca faça diagnóstico nem indique remédio ou dose. Se o tutor descrever uma emergência (convulsão, envenenamento, falta de ar, sangramento), oriente a ligar para a clínica imediatamente.",
           "maxIterations": 12
         }
       }
@@ -66,7 +66,7 @@
     },
     {
       "id": "c2f0c1a2-0002-4a00-9000-000000000006",
-      "name": "MemÃ³ria da conversa",
+      "name": "Memória da conversa",
       "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
       "typeVersion": 1.3,
       "position": [460, 380],
@@ -83,7 +83,7 @@
       "typeVersion": 1.1,
       "position": [620, 380],
       "parameters": {
-        "toolDescription": "Busca pets pelo nome (ou parte do nome). Retorna id do pet, nome, espÃ©cie, raÃ§a e dados do tutor.",
+        "toolDescription": "Busca pets pelo nome (ou parte do nome). Retorna id do pet, nome, espécie, raça e dados do tutor.",
         "method": "GET",
         "url": "={{ $env.PATACERTA_API_URL }}/pets?search={nome}",
         "sendHeaders": true,
@@ -104,7 +104,7 @@
       "typeVersion": 1.1,
       "position": [780, 380],
       "parameters": {
-        "toolDescription": "Lista os serviÃ§os da clÃ­nica (banho, tosa, consulta, vacina, exames) com id, tipo, duraÃ§Ã£o em minutos e preÃ§o em centavos.",
+        "toolDescription": "Lista os serviços da clínica (banho, tosa, consulta, vacina, exames) com id, tipo, duração em minutos e preço em centavos.",
         "method": "GET",
         "url": "={{ $env.PATACERTA_API_URL }}/services"
       }
@@ -116,7 +116,7 @@
       "typeVersion": 1.1,
       "position": [940, 380],
       "parameters": {
-        "toolDescription": "HorÃ¡rios livres de um serviÃ§o em um dia. Cada horÃ¡rio tem startsAt (use exatamente esse valor em agendar).",
+        "toolDescription": "Horários livres de um serviço em um dia. Cada horário tem startsAt (use exatamente esse valor em agendar).",
         "method": "GET",
         "url": "={{ $env.PATACERTA_API_URL }}/appointments/availability?serviceId={servico_id}&date={data}",
         "sendHeaders": true,
@@ -127,7 +127,7 @@
         },
         "placeholderDefinitions": {
           "values": [
-            { "name": "servico_id", "description": "id do serviÃ§o (de listar_servicos)", "type": "string" },
+            { "name": "servico_id", "description": "id do serviço (de listar_servicos)", "type": "string" },
             { "name": "data", "description": "Dia no formato AAAA-MM-DD", "type": "string" }
           ]
         }
@@ -155,9 +155,9 @@
         "placeholderDefinitions": {
           "values": [
             { "name": "pet_id", "description": "id do pet (de buscar_pet)", "type": "string" },
-            { "name": "servico_id", "description": "id do serviÃ§o (de listar_servicos)", "type": "string" },
+            { "name": "servico_id", "description": "id do serviço (de listar_servicos)", "type": "string" },
             { "name": "inicio", "description": "startsAt exatamente como veio de horarios_disponiveis", "type": "string" },
-            { "name": "observacao", "description": "ObservaÃ§Ã£o para a equipe, ex.: 'Agendado pelo WhatsApp; usar shampoo de clorexidina'", "type": "string" }
+            { "name": "observacao", "description": "Observação para a equipe, ex.: 'Agendado pelo WhatsApp; usar shampoo de clorexidina'", "type": "string" }
           ]
         }
       }
@@ -169,7 +169,7 @@
       "typeVersion": 1.1,
       "position": [1260, 380],
       "parameters": {
-        "toolDescription": "Vacinas, vermÃ­fugos e exames atrasados ou vencendo nos prÃ³ximos 60 dias, de todos os pets (filtre pelo pet da conversa).",
+        "toolDescription": "Vacinas, vermífugos e exames atrasados ou vencendo nos próximos 60 dias, de todos os pets (filtre pelo pet da conversa).",
         "method": "GET",
         "url": "={{ $env.PATACERTA_API_URL }}/records/due?days=60",
         "sendHeaders": true,
@@ -185,7 +185,7 @@
     "Mensagem do tutor": { "main": [[{ "node": "Entrar na PataCerta", "type": "main", "index": 0 }]] },
     "Entrar na PataCerta": { "main": [[{ "node": "Agente atendente", "type": "main", "index": 0 }]] },
     "Modelo Groq": { "ai_languageModel": [[{ "node": "Agente atendente", "type": "ai_languageModel", "index": 0 }]] },
-    "MemÃ³ria da conversa": { "ai_memory": [[{ "node": "Agente atendente", "type": "ai_memory", "index": 0 }]] },
+    "Memória da conversa": { "ai_memory": [[{ "node": "Agente atendente", "type": "ai_memory", "index": 0 }]] },
     "buscar_pet": { "ai_tool": [[{ "node": "Agente atendente", "type": "ai_tool", "index": 0 }]] },
     "listar_servicos": { "ai_tool": [[{ "node": "Agente atendente", "type": "ai_tool", "index": 0 }]] },
     "horarios_disponiveis": { "ai_tool": [[{ "node": "Agente atendente", "type": "ai_tool", "index": 0 }]] },

@@ -1,6 +1,6 @@
 {
   "id": "PcRelacionamento",
-  "name": "PataCerta Â· Agente de relacionamento (rotina diÃ¡ria)",
+  "name": "PataCerta · Agente de relacionamento (rotina diária)",
   "active": false,
   "settings": { "executionOrder": "v1", "timezone": "America/Recife" },
   "nodes": [
@@ -13,12 +13,12 @@
       "parameters": {
         "width": 900,
         "height": 200,
-        "content": "## Agente de relacionamento (contra o churn)\nTodo dia Ã s 9h (ou no botÃ£o **Rodar agora**): busca na PataCerta os pets com vacina, vermÃ­fugo ou exame atrasado sem nada agendado e os clientes que sumiram. O **Agente redator** escreve uma mensagem por cliente a partir do histÃ³rico, propondo resolver tudo na mesma visita (upsell). A PataCerta registra a mensagem, avisa o tutor no app e devolve o texto do WhatsApp com o link que abre o chat da Pata. A equipe envia pelo link gerado no Ãºltimo nÃ³."
+        "content": "## Agente de relacionamento (contra o churn)\nTodo dia às 9h (ou no botão **Rodar agora**): busca na PataCerta os pets com vacina, vermífugo ou exame atrasado sem nada agendado e os clientes que sumiram. O **Agente redator** escreve uma mensagem por cliente a partir do histórico, propondo resolver tudo na mesma visita (upsell). A PataCerta registra a mensagem, avisa o tutor no app e devolve o texto do WhatsApp com o link que abre o chat da Pata. A equipe envia pelo link gerado no último nó."
       }
     },
     {
       "id": "b1f0c1a2-0001-4a00-9000-000000000002",
-      "name": "Todo dia Ã s 9h",
+      "name": "Todo dia às 9h",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
       "position": [0, 0],
@@ -71,9 +71,9 @@
       "position": [720, 100],
       "parameters": {
         "promptType": "define",
-        "text": "=Tutor: {{ $json.tutorName }}\nPet: {{ $json.petName }} ({{ $json.species }})\nObservaÃ§Ãµes do cadastro: {{ $json.notes || 'nenhuma' }}\nMotivos do contato:\n{{ $json.reasons.map(r => '- ' + r).join('\\n') }}\nServiÃ§o sugerido: {{ $json.suggestedService }}\nHistÃ³rico recente:\n{{ $json.history || '- sem registros' }}",
+        "text": "=Tutor: {{ $json.tutorName }}\nPet: {{ $json.petName }} ({{ $json.species }})\nObservações do cadastro: {{ $json.notes || 'nenhuma' }}\nMotivos do contato:\n{{ $json.reasons.map(r => '- ' + r).join('\\n') }}\nServiço sugerido: {{ $json.suggestedService }}\nHistórico recente:\n{{ $json.history || '- sem registros' }}",
         "options": {
-          "systemMessage": "VocÃª Ã© o agente de relacionamento da clÃ­nica PataCerta e escreve mensagens de WhatsApp para tutores que a clÃ­nica estÃ¡ perdendo.\nTom caloroso e pessoal, portuguÃªs do Brasil, no mÃ¡ximo 3 frases, no mÃ¡ximo um emoji. Cite o pet pelo nome e o motivo do contato.\nSe houver mais de um cuidado pendente, ou se o pet jÃ¡ tiver uma visita marcada, proponha resolver tudo na mesma visita: Ã© mais prÃ¡tico para o tutor e Ã© o objetivo principal da mensagem.\nPode mencionar um detalhe do histÃ³rico que mostre cuidado, mas nunca faÃ§a diagnÃ³stico nem indique remÃ©dio.\nTermine convidando para agendar. NÃ£o coloque links (o sistema adiciona). Responda sÃ³ com o texto da mensagem."
+          "systemMessage": "Você é o agente de relacionamento da clínica PataCerta e escreve mensagens de WhatsApp para tutores que a clínica está perdendo.\nTom caloroso e pessoal, português do Brasil, no máximo 3 frases, no máximo um emoji. Cite o pet pelo nome e o motivo do contato.\nSe houver mais de um cuidado pendente, ou se o pet já tiver uma visita marcada, proponha resolver tudo na mesma visita: é mais prático para o tutor e é o objetivo principal da mensagem.\nPode mencionar um detalhe do histórico que mostre cuidado, mas nunca faça diagnóstico nem indique remédio.\nTermine convidando para agendar. Não coloque links (o sistema adiciona). Responda só com o texto da mensagem."
         }
       }
     },
@@ -135,7 +135,7 @@
     }
   ],
   "connections": {
-    "Todo dia Ã s 9h": { "main": [[{ "node": "Entrar na PataCerta", "type": "main", "index": 0 }]] },
+    "Todo dia às 9h": { "main": [[{ "node": "Entrar na PataCerta", "type": "main", "index": 0 }]] },
     "Rodar agora": { "main": [[{ "node": "Entrar na PataCerta", "type": "main", "index": 0 }]] },
     "Entrar na PataCerta": { "main": [[{ "node": "Buscar clientes em risco", "type": "main", "index": 0 }]] },
     "Buscar clientes em risco": { "main": [[{ "node": "Agente redator", "type": "main", "index": 0 }]] },
