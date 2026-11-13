@@ -90,6 +90,42 @@ sequenceDiagram
 4. **Segurança.** Uma checagem determinística detecta sinais de emergência antes do modelo e mostra o telefone da clínica na hora. O prompt proíbe diagnóstico e prescrição.
 5. **Resumo pré-atendimento.** No painel, a veterinária gera um resumo do histórico inteiro do paciente com alergias, condições crônicas, pendências e sugestões para a consulta.
 
+## Organização dos agentes: tutor e pet shop
+
+Os agentes são divididos por **papel**. Cada papel enxerga só as ferramentas e os dados que lhe cabem, e todos passam pelas mesmas regras do banco.
+
+```mermaid
+flowchart LR
+    subgraph Tutor["Equipe do tutor"]
+        PATA["Pata · app<br/>assistente + atendente"]
+        WA["Atendente · WhatsApp<br/>(n8n)"]
+    end
+    subgraph Loja["Equipe do pet shop"]
+        REL["Relacionamento<br/>(painel e n8n)"]
+        COP["Copiloto da gestão"]
+        CLI["Assistente clínico"]
+    end
+    REL -- "convite registrado" --> PATA
+    REL -- "convite registrado" --> WA
+    PATA & WA -- "ferramentas do tutor" --> API["API PataCerta<br/>regras, transação, eventos"]
+    REL & COP -- "ferramentas do pet shop" --> API
+    COP & CLI -- "consultas fixas (só leitura)" --> DB[("PostgreSQL")]
+    API --> DB
+```
+
+| Papel | Agente | Ferramentas | O que pode ver |
+| --- | --- | --- | --- |
+| Tutor | **Pata** (app) | histórico com citações (RAG), horários, agendar, agendar pacote, remarcar, meus agendamentos, cancelar, Pix | Só os pets daquele tutor (filtro no banco e na API) |
+| Tutor | **Atendente** (n8n, WhatsApp) | buscar pet, serviços, horários, pendências, agendar, agendamentos do dia, Pix | Age pela conta da clínica, para o tutor identificado na conversa |
+| Pet shop | **Relacionamento** | clientes em risco (cuidados atrasados, inativos), redação da mensagem, registro do convite | Toda a clínica; a equipe aprova antes de enviar |
+| Pet shop | **Copiloto da gestão** | faturamento, ocupação da agenda, agendamentos do dia, clientes inativos, agendar/remarcar/cancelar | Toda a clínica (só equipe) |
+| Pet shop | **Assistente clínico** | resumo pré-atendimento do histórico | Toda a clínica (só equipe) |
+
+Regras que valem para todos:
+- **Escritas passam pela API** com o token de quem pede: capacidade por serviço, horário de funcionamento (`CLINIC_HOURS`), transação serializável contra dupla reserva e eventos em tempo real.
+- **Leituras de gestão são consultas fixas e parametrizadas**: a IA escolhe a ferramenta e as datas, nunca escreve SQL.
+- **Os prompts compartilham o perfil da clínica** (`apps/ai-service/src/clinic.ts`): telefone, horário, catálogo com preços vindo do banco e qual serviço resolve cada cuidado. Os mesmos textos vão para o n8n com `node n8n/prompts.cjs`.
+
 ## Como os agentes funcionam
 
 ```mermaid

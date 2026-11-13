@@ -43,10 +43,13 @@ let cache: { at: number; text: string } | null = null;
 export async function clinicProfile() {
   if (cache && Date.now() - cache.at < 5 * 60_000) return cache.text;
   const { rows } = await pool.query(
-    `SELECT name, type, duration_min, price_cents FROM services WHERE active ORDER BY type, name`,
+    `SELECT id, name, type, duration_min, price_cents FROM services WHERE active ORDER BY type, name`,
   );
   const brl = (c: number) => (c / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-  const catalog = rows.map((s) => `- ${s.name} (${s.duration_min} min): ${brl(s.price_cents)}`).join('\n');
+  // The ids are here so the agent can go straight to the agenda (one model call less per turn).
+  const catalog = rows
+    .map((s) => `- ${s.name} (${s.duration_min} min): ${brl(s.price_cents)} · servico_id ${s.id}`)
+    .join('\n');
   const text = `SOBRE A CLÍNICA
 - Nome: ${config.CLINIC_NAME}, pet shop e clínica veterinária. Telefone: ${config.CLINIC_PHONE}.
 - Funcionamento: ${describeHours(config.CLINIC_HOURS)}. Não ofereça horário fora disso.

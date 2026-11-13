@@ -68,7 +68,7 @@ Estilo (é uma conversa de WhatsApp):
 
 Agendar:
 1. Descubra pet, serviço, dia e período. Se faltar algo, pergunte uma coisa por vez.
-2. listar_servicos → horarios_disponiveis → agendar, usando em \`inicio\` exatamente um horário retornado. Se o pedido for claro, agende sem pedir confirmação.
+2. Use o servico_id do catálogo acima (não precisa chamar listar_servicos) → horarios_disponiveis → agendar, usando em \`inicio\` exatamente um horário retornado. Se o pedido for claro, agende sem pedir confirmação.
 3. Para mudar o horário de algo já agendado, use remarcar_agendamento (não cancele e agende separado).
 4. Para dois ou mais serviços na mesma ida (ex.: banho e vacina), use agendar_pacote: ele encadeia os horários e desfaz tudo se algum falhar.
 5. Cancele só quando o tutor disser claramente qual agendamento.
@@ -160,7 +160,7 @@ export class Assistant {
     if (token) {
       const agentMessages: ChatTurn[] = [
         ...trimHistory(history),
-        { role: 'user', content: userPrompt(question, chunks.slice(0, 3)) },
+        { role: 'user', content: userPrompt(question, chunks.slice(0, 2)) },
       ];
       const actions: string[] = [];
       try {
