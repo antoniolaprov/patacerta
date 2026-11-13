@@ -147,6 +147,26 @@ export async function runRetention(llm: LlmProvider, windowDays = 30, inactiveDa
   );
 }
 
+export async function recordOutreach(o: { petId: string; tutorId: string; message: string; sentBy: string }) {
+  await pool.query(
+    `INSERT INTO agent_outreach (pet_id, tutor_id, message, sent_by) VALUES ($1, $2, $3, $4)`,
+    [o.petId, o.tutorId, o.message, o.sentBy],
+  );
+}
+
+/** The clinic's most recent message to this tutor in the last 7 days, if any. */
+export async function latestOutreach(tutorId: string) {
+  const { rows } = await pool.query(
+    `SELECT o.id, o.pet_id, p.name AS pet_name, o.message, o.created_at
+     FROM agent_outreach o JOIN pets p ON p.id = o.pet_id
+     WHERE o.tutor_id = $1 AND o.created_at > now() - interval '7 days'
+     ORDER BY o.created_at DESC LIMIT 1`,
+    [tutorId],
+  );
+  const r = rows[0];
+  return r ? { id: r.id, petId: r.pet_id, petName: r.pet_name, message: r.message, createdAt: r.created_at } : null;
+}
+
 async function writeMessage(
   llm: LlmProvider,
   pet: { id: string; name: string; species: string; notes: string | null; tutor: string },
@@ -159,7 +179,10 @@ async function writeMessage(
   );
   const history = rows.map((r) => `- ${formatDate(r.date)} ${r.title}: ${r.description}`).join('\n');
   const res = await llm.complete({
-    system: `Você escreve mensagens de WhatsApp da clínica PataCerta para tutores. Tom caloroso e pessoal, português do Brasil, no máximo 3 frases, sem emojis em excesso. Cite o pet pelo nome e o motivo do contato. Pode mencionar um detalhe do histórico que mostre cuidado (ex.: uma condição acompanhada), mas nunca faça diagnóstico nem indique remédio. Termine convidando para agendar. Responda só com o texto da mensagem.`,
+    system: `Você escreve mensagens de WhatsApp da clínica PataCerta para tutores. Tom caloroso e pessoal, português do Brasil, no máximo 3 frases, sem emojis em excesso. Cite o pet pelo nome e o motivo do contato.
+Se houver mais de um cuidado pendente, ou se o pet já tiver uma visita marcada, proponha resolver tudo na mesma visita: é mais prático para o tutor e é o principal objetivo da mensagem.
+Pode mencionar um detalhe do histórico que mostre cuidado (ex.: uma condição acompanhada), mas nunca faça diagnóstico nem indique remédio.
+Termine convidando para agendar. Não coloque links (o sistema adiciona). Responda só com o texto da mensagem.`,
     messages: [
       {
         role: 'user',

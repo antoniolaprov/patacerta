@@ -13,9 +13,11 @@ O tutor agenda banho, consulta e vacina pelo app, acompanha o atendimento em tem
 ## O que tem de interessante aqui
 
 - **Agentes de IA que agem, não só respondem.** A assistente decide qual ação tomar e executa no sistema, com as permissões de quem está usando:
-  - **Agendamento pelo chat (tutor):** "agende um banho para o Thor no sábado de manhã" → consulta o catálogo e a agenda, agenda, remarca ou cancela.
+  - **Agente de relacionamento (contra o churn):** um ciclo só, do WhatsApp ao agendamento.
+    1. No painel, o agente encontra os clientes que a clínica está perdendo (vacina, vermífugo ou exame atrasado sem nada agendado, ou sem visitas há meses) e escreve uma mensagem a partir do histórico, com **upsell**: propõe resolver tudo na mesma visita ("o Thor já vem para o banho no sábado: dá para aplicar a vacina atrasada na mesma ida").
+    2. A equipe revisa e envia pelo WhatsApp. A mensagem traz um link para o app.
+    3. O tutor toca no link e o chat da Pata abre com a mensagem da clínica. Ele responde do jeito dele ("pode ser sábado?") e o agente consulta a agenda, agenda e, ao agendar, oferece incluir o que estiver pendente para aquele pet.
   - **Copiloto da gestão (clínica):** "quanto faturamos este mês?", "qual dia da semana que vem está mais vazio?", "quem não aparece há 90 dias?" → consulta o banco e responde com números exatos.
-  - **Retenção proativa (clínica):** o agente acha pets com vacina, vermífugo ou exame atrasado sem nada agendado e clientes que sumiram, escreve uma mensagem personalizada a partir do histórico e sugere aproveitar visitas já marcadas ("o Thor já vem para o banho no sábado: dá para aplicar a vacina na mesma visita"). A equipe revisa e envia.
 - **IA contextualizada com os dados do sistema (RAG).** Cada consulta, vacina, banho e agendamento vira um trecho indexado com embeddings numa base vetorial (pgvector). A assistente busca os trechos relevantes, combina com fatos calculados via SQL e responde citando de onde tirou cada informação.
 - **Isolamento de dados na busca.** Um tutor nunca recupera registros de outra família, seja qual for a pergunta: o filtro por tutor é aplicado dentro da consulta vetorial e coberto por testes.
 - **Embeddings rodando localmente.** O modelo de embeddings (multilíngue, ótimo em português) roda no próprio servidor via ONNX. O modelo de linguagem é plugável: Claude pela API, qualquer API compatível com OpenAI (como Groq, com plano gratuito) ou um modelo aberto local com Ollama, deixando tudo offline.
@@ -104,7 +106,8 @@ flowchart LR
 3. **Leituras de gestão são consultas fixas e parametrizadas** (`tools/management.ts`): o modelo escolhe a ferramenta e as datas, nunca escreve SQL.
 4. **Erros viram informação.** Quando a API recusa ("esse horário acabou de ser preenchido"), o erro volta ao modelo como resultado da ferramenta e ele oferece outra opção.
 5. **Degradação graciosa.** Sem chave de modelo ou com o provedor fora do ar, o chat volta a responder no modo RAG e o agente de retenção usa uma mensagem padrão. A tela mostra qual dos dois escreveu cada mensagem.
-6. **Funciona com o plano gratuito do Groq** (padrão), com Claude ou com Ollama local: os três provedores implementam a chamada de ferramentas.
+6. **Memória do contato.** Cada mensagem enviada pelo agente de relacionamento fica registrada; quando o tutor abre o chat, a Pata sabe o que foi oferecido e entende "pode ser sábado" como resposta a esse convite.
+7. **Funciona com o plano gratuito do Groq** (padrão), com Claude ou com Ollama local: os três provedores implementam a chamada de ferramentas.
 
 ## Telas
 

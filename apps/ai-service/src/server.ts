@@ -10,7 +10,7 @@ import { reindexAll, startIndexer } from './indexer.js';
 import { createProvider } from './llm.js';
 import { startRealtime } from './realtime.js';
 import { startReminders } from './reminders.js';
-import { runRetention } from './retention.js';
+import { latestOutreach, recordOutreach, runRetention } from './retention.js';
 
 const llm = createProvider();
 const assistant = new Assistant(llm, config.RETRIEVAL_TOP_K);
@@ -113,7 +113,9 @@ async function main() {
     tutorId: z.string().uuid(),
     message: z.string().trim().min(5).max(1000),
   });
-  app.post('/agents/retention/send', requireAuth, (req, res) => {
+  // Sends the agent's message: records it, notifies the tutor's app and returns
+  // the WhatsApp text with a link that opens the Pata chat in the app.
+  app.post('/agents/retention/send', requireAuth, async (req, res) => {
     if (!isStaff(req.user!)) {
       res.status(403).json({ message: 'Recurso exclusivo da equipe' });
       return;
@@ -124,8 +126,17 @@ async function main() {
       return;
     }
     const { petId, tutorId, message } = parsed.data;
+    await recordOutreach({ petId, tutorId, message, sentBy: req.user!.id });
     emit({ rooms: [`user:${tutorId}`], event: 'reminder', payload: { petId, message } });
-    res.json({ sent: true });
+    res.json({
+      sent: true,
+      whatsappText: `${message}\n\nPara agendar em dois toques, fale com a Pata no app: ${config.WEB_URL}/?pata=1`,
+    });
+  });
+
+  // The tutor app opens the chat with the clinic's latest message.
+  app.get('/agents/outreach/latest', requireAuth, async (req, res) => {
+    res.json(isStaff(req.user!) ? null : await latestOutreach(req.user!.id));
   });
   startIndexer();
   startReminders(emit);

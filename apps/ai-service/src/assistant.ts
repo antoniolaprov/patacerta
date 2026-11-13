@@ -6,6 +6,7 @@ import { accessiblePets, buildFactSheet, mentionedPets, type PetSummary } from '
 import { pool } from './db.js';
 import { formatDate } from './documents.js';
 import type { LlmProvider } from './llm.js';
+import { latestOutreach } from './retention.js';
 import { managementTools } from './tools/management.js';
 import { staffSchedulingTools, tutorTools } from './tools/scheduling.js';
 import {
@@ -44,14 +45,27 @@ export function toolsFor(user: AuthUser): AgentTool[] {
   return isStaff(user) ? [...managementTools, ...staffSchedulingTools] : tutorTools;
 }
 
-export function agentInstructions(user: AuthUser, pets: PetSummary[], now = new Date()) {
+export interface Outreach {
+  petName: string;
+  message: string;
+  createdAt: string | Date;
+}
+
+export function agentInstructions(user: AuthUser, pets: PetSummary[], now = new Date(), outreach?: Outreach | null) {
   const today = clinicToday(now);
   const ids = pets.map((p) => `- ${p.name}: ${p.id}`).join('\n') || '- nenhum';
   const role =
     user.role === 'TUTOR'
       ? `Você também AGE no sistema para este tutor: lista serviços, consulta horários, agenda, mostra e cancela agendamentos dos pets dele.
 - Se o pedido for claro (pet, serviço, dia e período), agende sem pedir confirmação. Se faltar algo, pergunte antes.
-- Cancele só quando o tutor disser claramente qual agendamento.`
+- Cancele só quando o tutor disser claramente qual agendamento.
+- Sugestão na mesma visita: ao agendar para um pet, confira os itens atrasados ou vencendo desse pet (lista acima). Se houver algum, ofereça UMA vez resolver na mesma ida (agendando o serviço extra logo antes ou depois). Se o tutor aceitar, agende os dois; se recusar, não insista.
+- Se o histórico pedir um cuidado no atendimento (ex.: shampoo de clorexidina por dermatite), coloque isso na observação do agendamento.${
+          outreach
+            ? `
+- A clínica enviou a este tutor, em ${formatDate(outreach.createdAt)}, sobre ${outreach.petName}, a mensagem: "${outreach.message}". Se o tutor responder a esse convite (ex.: "pode ser sábado", "quero"), entenda que é sobre ele e conduza até o agendamento.`
+            : ''
+        }`
       : `Você também AGE como copiloto da gestão: consulta faturamento, ocupação da agenda, agendamentos do dia e clientes inativos, e pode agendar ou cancelar para qualquer pet.
 - Para perguntas de gestão, use as ferramentas em vez de estimar. Traga números exatos e uma recomendação prática curta.
 - Agende ou cancele só quando a pessoa pedir.`;
@@ -115,10 +129,11 @@ export class Assistant {
     if (token) {
       const actions: string[] = [];
       try {
+        const outreach = isStaff(user) ? null : await latestOutreach(user.id);
         let answer = '';
         for await (const step of runAgent({
           llm: this.llm,
-          system: systemPrompt(user, facts) + agentInstructions(user, pets),
+          system: systemPrompt(user, facts) + agentInstructions(user, pets, new Date(), outreach),
           messages,
           tools: toolsFor(user),
           ctx: { user, token },

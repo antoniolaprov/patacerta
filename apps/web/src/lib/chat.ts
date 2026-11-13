@@ -23,6 +23,26 @@ export interface ChatTurn {
   content: string;
 }
 
+/** The clinic's latest message to this tutor (sent by the relationship agent). */
+export interface Outreach {
+  id: string;
+  petId: string;
+  petName: string;
+  message: string;
+  createdAt: string;
+}
+
+export async function fetchOutreach(): Promise<Outreach | null> {
+  try {
+    const res = await fetch(`${AI_URL}/agents/outreach/latest`, {
+      headers: { authorization: `Bearer ${tokenStore.get() ?? ''}` },
+    });
+    return res.ok ? ((await res.json()) as Outreach | null) : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Reads the assistant's Server-Sent Events stream. `fetch` is used instead of
  * EventSource because the request is a POST with a bearer token.

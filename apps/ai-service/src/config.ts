@@ -13,6 +13,8 @@ const schema = z.object({
   CLINIC_TIMEZONE: z.string().default('America/Recife'),
   /** The agents act through the API, so they reuse its business rules and events. */
   API_URL: z.string().default('http://localhost:3000/api'),
+  /** Tutor app address, used in the link the relationship agent sends on WhatsApp. */
+  WEB_URL: z.string().default('http://localhost:5173'),
   /** Max tool calls in one agent turn (guards against loops). */
   AGENT_MAX_STEPS: z.coerce.number().int().positive().default(6),
 

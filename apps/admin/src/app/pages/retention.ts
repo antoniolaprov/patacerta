@@ -25,10 +25,11 @@ interface Proposal {
   template: `
     <header class="page-head">
       <div>
-        <h1>Retenção com IA</h1>
+        <h1>Agente de relacionamento</h1>
         <p class="muted">
-          O agente procura pets com cuidados atrasados ou vencendo sem nada agendado, e clientes que sumiram.
-          Para cada um, escreve uma mensagem a partir do histórico. Você revisa e envia.
+          O agente encontra os clientes que a clínica está perdendo (cuidados atrasados sem nada agendado, ou sem visitas
+          há meses) e escreve uma mensagem com base no histórico, sugerindo resolver tudo na mesma visita. Você revisa e
+          envia pelo WhatsApp; o tutor toca no link e agenda com a Pata no app.
         </p>
       </div>
       <button class="btn btn--primary" (click)="run()" [disabled]="loading()">
@@ -61,11 +62,16 @@ interface Proposal {
           </label>
           <textarea [id]="'msg-' + p.petId" [(ngModel)]="p.message"></textarea>
           <div class="retention-card__actions">
-            <button class="btn btn--small btn--primary" (click)="send(p)" [disabled]="p.sent">
-              {{ p.sent ? 'Enviado no app' : 'Enviar no app do tutor' }}
+            @if (p.phone) {
+              <button class="btn btn--small btn--primary" (click)="send(p, true)">
+                {{ p.sent ? 'Enviar de novo no WhatsApp' : 'Enviar no WhatsApp' }}
+              </button>
+            }
+            <button class="btn btn--small" (click)="send(p, false)" [disabled]="p.sent">
+              {{ p.sent ? 'Enviado' : 'Só avisar no app' }}
             </button>
-            @if (wa(p); as link) {
-              <a class="btn btn--small" [href]="link" target="_blank" rel="noopener">Abrir no WhatsApp</a>
+            @if (p.sent) {
+              <span class="muted small">O tutor já vê a mensagem ao abrir a Pata no app.</span>
             }
           </div>
         </article>
@@ -109,16 +115,22 @@ export class RetentionPage {
     }
   }
 
-  async send(p: Proposal) {
+  /** Records the message (the chat in the app picks it up) and optionally opens WhatsApp. */
+  async send(p: Proposal, viaWhatsapp: boolean) {
+    // Opened before the request so the browser doesn't block it as a pop-up.
+    const tab = viaWhatsapp ? window.open('', '_blank') : null;
     try {
-      await this.post('/agents/retention/send', { petId: p.petId, tutorId: p.tutorId, message: p.message });
+      const { whatsappText } = await this.post<{ whatsappText: string }>('/agents/retention/send', {
+        petId: p.petId,
+        tutorId: p.tutorId,
+        message: p.message,
+      });
       this.proposals.update((list) => list.map((x) => (x.petId === p.petId ? { ...x, sent: true } : x)));
+      const link = whatsapp(p.phone, whatsappText);
+      if (tab && link) tab.location.href = link;
     } catch (err) {
+      tab?.close();
       this.error.set((err as Error).message);
     }
-  }
-
-  protected wa(p: Proposal) {
-    return whatsapp(p.phone, p.message);
   }
 }

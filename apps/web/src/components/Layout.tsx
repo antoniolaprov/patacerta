@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { NavLink, Outlet, useMatch } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { NavLink, Outlet, useMatch, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import { useRealtime } from '../lib/realtime';
 import type { Pet } from '../lib/types';
@@ -16,7 +16,17 @@ export function Layout() {
   const { user, logout } = useAuth();
   const { toasts, dismiss } = useRealtime();
   const [assistantOpen, setAssistantOpen] = useState(false);
+  const [params, setParams] = useSearchParams();
   const petMatch = useMatch('/pets/:id');
+
+  // The link in the clinic's WhatsApp message (?pata=1) opens the chat directly.
+  useEffect(() => {
+    if (params.get('pata') === '1') {
+      setAssistantOpen(true);
+      params.delete('pata');
+      setParams(params, { replace: true });
+    }
+  }, [params, setParams]);
   const { data: pets } = useFetch<Pet[]>('/pets');
   const currentPet = pets?.find((p) => p.id === petMatch?.params.id);
 

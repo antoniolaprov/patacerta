@@ -31,5 +31,17 @@ export async function ensureSchema() {
     CREATE INDEX IF NOT EXISTS knowledge_chunks_pet_idx ON knowledge_chunks (pet_id);
     CREATE INDEX IF NOT EXISTS knowledge_chunks_embedding_idx
       ON knowledge_chunks USING hnsw (embedding vector_cosine_ops);
+
+    -- Messages the relationship agent sent to a tutor (WhatsApp + app). The chat
+    -- reads the latest one, so "pode ser sábado?" is understood as a reply to it.
+    CREATE TABLE IF NOT EXISTS agent_outreach (
+      id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      pet_id     uuid NOT NULL,
+      tutor_id   uuid NOT NULL,
+      message    text NOT NULL,
+      sent_by    uuid,
+      created_at timestamptz NOT NULL DEFAULT now()
+    );
+    CREATE INDEX IF NOT EXISTS agent_outreach_tutor_idx ON agent_outreach (tutor_id, created_at DESC);
   `);
 }

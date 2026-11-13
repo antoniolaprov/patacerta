@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { streamChat, type ChatTurn, type Citation } from '../lib/chat';
+import { fetchOutreach, streamChat, type ChatTurn, type Citation, type Outreach } from '../lib/chat';
 import { RichText } from './RichText';
 
 const CLINIC_PHONE = import.meta.env.VITE_CLINIC_PHONE ?? '(81) 3333-0000';
@@ -19,6 +19,13 @@ const SUGGESTIONS = [
   'O que a veterinária disse na última consulta?',
 ];
 
+/** Quick replies when the chat opens from the clinic's WhatsApp message. */
+const OUTREACH_REPLIES = [
+  'Pode ser no próximo sábado de manhã',
+  'Quero resolver tudo na mesma visita',
+  'Quanto fica?',
+];
+
 export function Assistant({
   petId,
   petName,
@@ -31,7 +38,12 @@ export function Assistant({
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
+  const [outreach, setOutreach] = useState<Outreach | null>(null);
   const abort = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    fetchOutreach().then(setOutreach);
+  }, []);
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -104,7 +116,22 @@ export function Assistant({
       </header>
 
       <div className="assistant__body" aria-live="polite">
-        {messages.length === 0 && (
+        {outreach && (
+          <div className="bubble bubble--pata bubble--outreach">
+            <p className="bubble__tag">Mensagem da clínica sobre {outreach.petName}</p>
+            <p>{outreach.message}</p>
+            {messages.length === 0 && (
+              <div className="chips">
+                {OUTREACH_REPLIES.map((s) => (
+                  <button key={s} className="chip" onClick={() => ask(s)}>
+                    {s}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+        {messages.length === 0 && !outreach && (
           <div className="assistant__empty">
             <p>
               Pergunte sobre vacinas, consultas, banhos ou agendamentos. A Pata consulta o

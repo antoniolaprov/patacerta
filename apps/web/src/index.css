@@ -1045,3 +1045,17 @@ textarea:focus {
 .agent-actions__fail {
   color: #b42318;
 }
+
+/* Mensagem proativa da clínica (agente de relacionamento) no topo do chat */
+.bubble--outreach {
+  border-left: 3px solid #2e7d32;
+  border-radius: 0 12px 12px 0;
+}
+.bubble__tag {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.7;
+  margin: 0 0 4px;
+}
