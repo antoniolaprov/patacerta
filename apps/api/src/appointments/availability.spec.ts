@@ -1,4 +1,4 @@
-import { computeSlots } from './availability.js';
+import { computeSlots, isoWeekday, parseBusinessHours, withinBusinessHours } from './availability.js';
 
 const base = {
   date: '2030-01-10',
@@ -55,5 +55,31 @@ describe('computeSlots', () => {
       '2030-01-10T19:30:00.000Z',
       '2030-01-10T20:00:00.000Z',
     ]);
+  });
+});
+
+describe('horário de funcionamento', () => {
+  const hours = parseBusinessHours('1-5=8-18,6=8-13');
+
+  it('lê dias úteis, sábado e deixa o domingo fechado', () => {
+    expect(hours[1]).toEqual([8, 18]);
+    expect(hours[5]).toEqual([8, 18]);
+    expect(hours[6]).toEqual([8, 13]);
+    expect(hours[7]).toBeUndefined();
+  });
+
+  it('calcula o dia da semana ISO', () => {
+    expect(isoWeekday('2026-11-15')).toBe(7); // domingo
+    expect(isoWeekday('2026-11-14')).toBe(6); // sábado
+  });
+
+  it('aceita só atendimentos dentro do horário, no fuso da clínica', () => {
+    const at = (iso: string, min = 60) => withinBusinessHours(new Date(iso), min, hours, '-03:00');
+    expect(at('2026-11-14T12:00:00Z')).toBe(true); // sábado 9h
+    expect(at('2026-11-14T15:00:00Z')).toBe(true); // sábado 12h, termina 13h
+    expect(at('2026-11-14T15:30:00Z')).toBe(false); // sábado 12h30, passa das 13h
+    expect(at('2026-11-15T12:00:00Z')).toBe(false); // domingo
+    expect(at('2026-11-16T10:00:00Z')).toBe(false); // segunda 7h
+    expect(at('2026-11-16T20:00:00Z')).toBe(true); // segunda 17h
   });
 });

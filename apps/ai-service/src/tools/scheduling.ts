@@ -135,7 +135,102 @@ export const cancel = defineTool({
   },
 });
 
+const setStatusCanceled = (token: string, id: string, notes: string) =>
+  callApi<ApiAppointment>(token, 'PATCH', `/appointments/${id}/status`, { status: 'CANCELED', notes });
+
+export const reschedule = defineTool({
+  name: 'remarcar_agendamento',
+  description:
+    'Muda o horário de um agendamento existente (id de meus_agendamentos ou agendamentos_do_dia). O antigo só é cancelado depois que o novo horário for confirmado.',
+  schema: z.object({
+    agendamento_id: z.string().uuid(),
+    novo_inicio: z.string().datetime({ offset: true }).describe('Um horário retornado por horarios_disponiveis'),
+  }),
+  async run({ agendamento_id, novo_inicio }, ctx) {
+    const list = await callApi<(ApiAppointment & { pet: { id: string } })[]>(ctx.token, 'GET', '/appointments');
+    const old = list.find((a) => a.id === agendamento_id);
+    if (!old) throw new ToolError('Agendamento não encontrado');
+    if (!ACTIVE.includes(old.status)) throw new ToolError('Esse agendamento não está ativo para ser remarcado');
+    const create = () =>
+      callApi<ApiAppointment>(ctx.token, 'POST', '/appointments', {
+        petId: old.pet.id,
+        serviceId: old.service.id,
+        startsAt: novo_inicio,
+        notes: `${old.notes ? `${old.notes} · ` : ''}Remarcado pela assistente Pata`,
+      });
+    let created: ApiAppointment;
+    try {
+      created = await create();
+    } catch (err) {
+      // The new time overlaps the old one for the same pet: free the old slot first,
+      // and put it back if the new time still can't be booked.
+      if (!(err instanceof ToolError) || !/já tem um atendimento/i.test(err.message)) throw err;
+      await setStatusCanceled(ctx.token, old.id, 'Remarcado pela assistente Pata');
+      try {
+        created = await create();
+      } catch (retryErr) {
+        await callApi(ctx.token, 'POST', '/appointments', {
+          petId: old.pet.id,
+          serviceId: old.service.id,
+          startsAt: old.startsAt,
+          notes: old.notes ?? undefined,
+        }).catch(() => undefined);
+        throw retryErr;
+      }
+      return { remarcado: summarize(created), antes: clinicDateTime(old.startsAt) };
+    }
+    await setStatusCanceled(ctx.token, old.id, 'Remarcado pela assistente Pata');
+    return { remarcado: summarize(created), antes: clinicDateTime(old.startsAt) };
+  },
+  describe: (_a, r) => {
+    const { remarcado, antes } = r as { remarcado: ReturnType<typeof summarize>; antes: string };
+    return `Remarcou ${remarcado.servico} de ${remarcado.pet}: de ${antes} para ${remarcado.quando}`;
+  },
+});
+
+export const bookPackage = defineTool({
+  name: 'agendar_pacote',
+  description:
+    'Agenda dois ou mais serviços seguidos para o mesmo pet (ex.: banho e depois vacina). Cada um começa quando o anterior termina. Se algum horário não puder ser agendado, desfaz tudo e explica o motivo.',
+  schema: z.object({
+    pet_id: z.string().uuid(),
+    servicos: z.array(z.string().uuid()).min(2).max(4).describe('ids dos serviços, na ordem em que acontecem'),
+    inicio: z.string().datetime({ offset: true }).describe('Início do primeiro serviço (de horarios_disponiveis)'),
+    observacao: z.string().max(300).optional(),
+  }),
+  async run({ pet_id, servicos, inicio, observacao }, ctx) {
+    const catalog = await callApi<ApiService[]>(ctx.token, 'GET', '/services');
+    const done: ApiAppointment[] = [];
+    let cursor = new Date(inicio);
+    for (const id of servicos) {
+      const service = catalog.find((s) => s.id === id);
+      if (!service) throw new ToolError(`Serviço ${id} não existe no catálogo`);
+      try {
+        const a = await callApi<ApiAppointment>(ctx.token, 'POST', '/appointments', {
+          petId: pet_id,
+          serviceId: id,
+          startsAt: cursor.toISOString(),
+          notes: `${observacao ? `${observacao} · ` : ''}Pacote agendado pela assistente Pata`,
+        });
+        done.push(a);
+      } catch (err) {
+        // All or nothing: undo what was already booked in this package.
+        await Promise.all(done.map((a) => setStatusCanceled(ctx.token, a.id, 'Pacote desfeito').catch(() => undefined)));
+        const reason = err instanceof ToolError ? err.message : 'erro inesperado';
+        throw new ToolError(`Não deu para agendar ${service.name} em ${clinicDateTime(cursor)}: ${reason}. Nada foi agendado.`);
+      }
+      cursor = new Date(cursor.getTime() + service.durationMin * 60_000);
+    }
+    const total = servicos.reduce((t, id) => t + (catalog.find((s) => s.id === id)?.priceCents ?? 0), 0);
+    return { agendamentos: done.map(summarize), total: brl(total) };
+  },
+  describe: (_a, r) => {
+    const { agendamentos, total } = r as { agendamentos: ReturnType<typeof summarize>[]; total: string };
+    return `Agendou pacote para ${agendamentos[0]?.pet}: ${agendamentos.map((a) => `${a.servico} (${a.quando})`).join(' + ')} · total ${total}`;
+  },
+});
+
 /** Tutors manage their own pets' agenda; the API enforces ownership. */
-export const tutorTools = [listServices, availableSlots, book, myAppointments, cancel, createPix];
+export const tutorTools = [listServices, availableSlots, book, bookPackage, reschedule, myAppointments, cancel, createPix];
 /** The clinic team can book for any pet. */
-export const staffSchedulingTools = [listServices, availableSlots, book, cancel, createPix];
+export const staffSchedulingTools = [listServices, availableSlots, book, bookPackage, reschedule, cancel, createPix];

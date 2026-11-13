@@ -22,7 +22,14 @@ import {
   ListAppointmentsQuery,
   UpdateStatusDto,
 } from './appointments.dto.js';
-import { CAPACITY, computeSlots } from './availability.js';
+import {
+  CAPACITY,
+  computeSlots,
+  isoWeekday,
+  parseBusinessHours,
+  withinBusinessHours,
+  type BusinessHours,
+} from './availability.js';
 
 const ACTIVE: AppointmentStatus[] = ['SCHEDULED', 'CONFIRMED', 'IN_PROGRESS'];
 
@@ -55,6 +62,8 @@ const withRelations = {
 @Injectable()
 export class AppointmentsService {
   private readonly utcOffset: string;
+  /** Opening hours (CLINIC_HOURS, e.g. "1-5=8-18,6=8-13": Mon-Fri 8-18, Sat 8-13, Sun closed). */
+  private readonly hours: BusinessHours;
 
   constructor(
     @InjectDb() private readonly db: Database,
@@ -62,6 +71,7 @@ export class AppointmentsService {
     config: ConfigService,
   ) {
     this.utcOffset = config.get('CLINIC_UTC_OFFSET', '-03:00');
+    this.hours = parseBusinessHours(config.get('CLINIC_HOURS', '1-5=8-18,6=8-13'));
   }
 
   private dayRange(date: string) {
@@ -79,6 +89,9 @@ export class AppointmentsService {
       where: eq(services.id, serviceId),
     });
     if (!service) throw new NotFoundException('Serviço não encontrado');
+
+    const open = this.hours[isoWeekday(date)];
+    if (!open) return []; // clinic closed that day
 
     const { start, end } = this.dayRange(date);
     const busy = await this.db
@@ -99,6 +112,8 @@ export class AppointmentsService {
       capacity: CAPACITY[service.type],
       busy,
       utcOffset: this.utcOffset,
+      openHour: open[0],
+      closeHour: open[1],
     });
   }
 
@@ -141,6 +156,11 @@ export class AppointmentsService {
 
     const startsAt = new Date(dto.startsAt);
     if (startsAt <= new Date()) throw new BadRequestException('Escolha um horário futuro');
+    if (!withinBusinessHours(startsAt, service.durationMin, this.hours, this.utcOffset)) {
+      throw new BadRequestException(
+        'Fora do horário de funcionamento (segunda a sexta, 8h às 18h; sábado, 8h às 13h; domingo fechado)',
+      );
+    }
     const endsAt = new Date(startsAt.getTime() + service.durationMin * 60_000);
 
     const created = await this.db.transaction(
