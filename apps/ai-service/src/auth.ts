@@ -30,16 +30,20 @@ export function verifyToken(token: string | undefined): AuthUser | null {
 declare module 'express-serve-static-core' {
   interface Request {
     user?: AuthUser;
+    /** Raw bearer token, forwarded when an agent acts on the API as this user. */
+    token?: string;
   }
 }
 
 export function requireAuth(req: Request, res: Response, next: NextFunction) {
   const header = req.headers.authorization;
-  const user = verifyToken(header?.startsWith('Bearer ') ? header.slice(7) : undefined);
+  const token = header?.startsWith('Bearer ') ? header.slice(7) : undefined;
+  const user = verifyToken(token);
   if (!user) {
     res.status(401).json({ message: 'Sessão inválida ou expirada' });
     return;
   }
   req.user = user;
+  req.token = token;
   next();
 }

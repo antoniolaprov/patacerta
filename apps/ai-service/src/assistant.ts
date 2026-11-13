@@ -1,9 +1,13 @@
+import { runAgent, type AgentTool } from './agent.js';
+import { clinicToday } from './api-client.js';
 import type { AuthUser } from './auth.js';
 import { isStaff } from './auth.js';
 import { accessiblePets, buildFactSheet, mentionedPets, type PetSummary } from './context.js';
 import { pool } from './db.js';
 import { formatDate } from './documents.js';
 import type { LlmProvider } from './llm.js';
+import { managementTools } from './tools/management.js';
+import { staffSchedulingTools, tutorTools } from './tools/scheduling.js';
 import {
   selectChunks,
   systemPrompt,
@@ -20,6 +24,8 @@ export type AssistantEvent =
   | { type: 'meta'; emergency: boolean; model: string }
   | { type: 'sources'; sources: Citation[] }
   | { type: 'token'; text: string }
+  /** Something the agent did in the system (booked, checked the agenda...). */
+  | { type: 'action'; tool: string; label: string; ok: boolean }
   | { type: 'done' }
   | { type: 'error'; message: string };
 
@@ -29,6 +35,36 @@ export interface AskInput {
   history?: ChatTurn[];
   /** Optional: the screen the user is on (e.g. a pet's page) narrows the search. */
   petId?: string;
+  /** The user's token: when present the assistant can act, not only answer. */
+  token?: string;
+}
+
+/** What each role's agent may do. Tutors act on their own pets only (enforced by the API). */
+export function toolsFor(user: AuthUser): AgentTool[] {
+  return isStaff(user) ? [...managementTools, ...staffSchedulingTools] : tutorTools;
+}
+
+export function agentInstructions(user: AuthUser, pets: PetSummary[], now = new Date()) {
+  const today = clinicToday(now);
+  const ids = pets.map((p) => `- ${p.name}: ${p.id}`).join('\n') || '- nenhum';
+  const role =
+    user.role === 'TUTOR'
+      ? `Você também AGE no sistema para este tutor: lista serviços, consulta horários, agenda, mostra e cancela agendamentos dos pets dele.
+- Se o pedido for claro (pet, serviço, dia e período), agende sem pedir confirmação. Se faltar algo, pergunte antes.
+- Cancele só quando o tutor disser claramente qual agendamento.`
+      : `Você também AGE como copiloto da gestão: consulta faturamento, ocupação da agenda, agendamentos do dia e clientes inativos, e pode agendar ou cancelar para qualquer pet.
+- Para perguntas de gestão, use as ferramentas em vez de estimar. Traga números exatos e uma recomendação prática curta.
+- Agende ou cancele só quando a pessoa pedir.`;
+  return `
+
+AÇÕES NO SISTEMA
+${role}
+- Hoje é ${today.weekday}, ${today.iso} (fuso da clínica). Converta "amanhã", "sábado", "semana que vem" em datas AAAA-MM-DD.
+- Para agendar: obtenha o serviço com listar_servicos, consulte horarios_disponiveis e use em \`inicio\` exatamente um horário retornado.
+- Se uma ferramenta devolver erro, explique de forma simples e ofereça alternativas.
+- Depois de agir, confirme em uma frase o que foi feito (serviço, pet, dia e hora).
+IDs dos pets:
+${ids}`;
 }
 
 export class Assistant {
@@ -55,7 +91,7 @@ export class Assistant {
     return selectChunks(results, this.topK);
   }
 
-  async *ask({ user, question, history = [], petId }: AskInput): AsyncGenerator<AssistantEvent> {
+  async *ask({ user, question, history = [], petId, token }: AskInput): AsyncGenerator<AssistantEvent> {
     const pets = await accessiblePets(user);
     if (petId && !pets.some((p) => p.id === petId)) {
       yield { type: 'error', message: 'Pet não encontrado' };
@@ -70,11 +106,49 @@ export class Assistant {
     ]);
     yield { type: 'sources', sources: toCitations(chunks) };
 
+    const messages: ChatTurn[] = [
+      ...trimHistory(history),
+      { role: 'user', content: userPrompt(question, chunks) },
+    ];
+
+    // Agent mode: the model may call tools before answering.
+    if (token) {
+      const actions: string[] = [];
+      try {
+        let answer = '';
+        for await (const step of runAgent({
+          llm: this.llm,
+          system: systemPrompt(user, facts) + agentInstructions(user, pets),
+          messages,
+          tools: toolsFor(user),
+          ctx: { user, token },
+        })) {
+          if (step.type === 'action') {
+            if (step.ok) actions.push(step.label);
+            yield { type: 'action', tool: step.tool, label: step.label, ok: step.ok };
+          } else {
+            answer = step.text;
+          }
+        }
+        if (answer) {
+          yield { type: 'token', text: answer };
+          yield { type: 'done' };
+          return;
+        }
+      } catch (err) {
+        console.error('[agent]', err);
+      }
+      // Something already happened in the system: report it rather than
+      // answering as if nothing was done.
+      if (actions.length) {
+        yield { type: 'token', text: `Pronto. O que fiz:\n${actions.map((a) => `- ${a}`).join('\n')}` };
+        yield { type: 'done' };
+        return;
+      }
+      // Otherwise fall back to the plain answer below (no tools).
+    }
+
     try {
-      const messages: ChatTurn[] = [
-        ...trimHistory(history),
-        { role: 'user', content: userPrompt(question, chunks) },
-      ];
       for await (const text of this.llm.stream({ system: systemPrompt(user, facts), messages })) {
         yield { type: 'token', text };
       }

@@ -9,13 +9,14 @@ interface Message extends ChatTurn {
   emergency?: boolean;
   error?: string;
   pending?: boolean;
+  actions?: { label: string; ok: boolean }[];
 }
 
 const SUGGESTIONS = [
+  'Agende um banho para o Thor no próximo sábado de manhã',
   'Tem alguma vacina atrasada?',
-  'Quando foi o último vermífugo?',
+  'Quais são meus próximos agendamentos?',
   'O que a veterinária disse na última consulta?',
-  'Qual o próximo agendamento?',
 ];
 
 export function Assistant({
@@ -60,10 +61,15 @@ export function Assistant({
     abort.current = new AbortController();
 
     let answer = '';
+    const actions: { label: string; ok: boolean }[] = [];
     try {
       for await (const event of streamChat({ message: question, history, petId }, abort.current.signal)) {
         if (event.type === 'meta') update({ emergency: event.emergency });
         if (event.type === 'sources') update({ sources: event.sources });
+        if (event.type === 'action') {
+          actions.push({ label: event.label, ok: event.ok });
+          update({ actions: [...actions] });
+        }
         if (event.type === 'token') {
           answer += event.text;
           update({ content: answer, pending: false });
@@ -126,6 +132,15 @@ export function Assistant({
                   Se for uma emergência, não espere: ligue para a clínica agora no {CLINIC_PHONE}
                   ou vá ao pronto-atendimento veterinário mais próximo.
                 </p>
+              )}
+              {m.actions && m.actions.length > 0 && (
+                <ul className="agent-actions" aria-label="O que a Pata fez">
+                  {m.actions.map((a, j) => (
+                    <li key={j} className={a.ok ? '' : 'agent-actions__fail'}>
+                      {a.ok ? '✓' : '!'} {a.label}
+                    </li>
+                  ))}
+                </ul>
               )}
               {m.pending && <span className="typing" aria-label="Pata está digitando" />}
               {m.content && <RichText text={m.content} sources={m.sources} />}

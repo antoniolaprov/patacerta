@@ -1030,3 +1030,18 @@ textarea:focus {
     transition: none !important;
   }
 }
+
+/* Ações executadas pelo agente dentro da resposta da Pata */
+.agent-actions {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(46, 125, 50, 0.08);
+  font-size: 0.85rem;
+  display: grid;
+  gap: 4px;
+}
+.agent-actions__fail {
+  color: #b42318;
+}

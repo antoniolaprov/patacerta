@@ -10,8 +10,10 @@ import { reindexAll, startIndexer } from './indexer.js';
 import { createProvider } from './llm.js';
 import { startRealtime } from './realtime.js';
 import { startReminders } from './reminders.js';
+import { runRetention } from './retention.js';
 
-const assistant = new Assistant(createProvider(), config.RETRIEVAL_TOP_K);
+const llm = createProvider();
+const assistant = new Assistant(llm, config.RETRIEVAL_TOP_K);
 
 const chatBody = z.object({
   message: z.string().trim().min(1).max(2000),
@@ -70,7 +72,10 @@ async function main() {
       return;
     }
     const { message, history, petId } = parsed.data;
-    await streamEvents(res, assistant.ask({ user: req.user!, question: message, history, petId }));
+    await streamEvents(
+      res,
+      assistant.ask({ user: req.user!, question: message, history, petId, token: req.token }),
+    );
   });
 
   app.post('/assist/pet-brief/:petId', requireAuth, async (req, res) => {
@@ -88,6 +93,40 @@ async function main() {
 
   const http = createServer(app);
   const { emit } = startRealtime(http);
+
+  // Proactive retention agent: proposes who to contact; the team approves.
+  app.post('/agents/retention/run', requireAuth, async (req, res) => {
+    if (!isStaff(req.user!)) {
+      res.status(403).json({ message: 'Recurso exclusivo da equipe' });
+      return;
+    }
+    try {
+      res.json({ model: llm.name, proposals: await runRetention(llm) });
+    } catch (err) {
+      console.error('[retention]', err);
+      res.status(500).json({ message: 'Não foi possível rodar o agente de retenção agora.' });
+    }
+  });
+
+  const sendBody = z.object({
+    petId: z.string().uuid(),
+    tutorId: z.string().uuid(),
+    message: z.string().trim().min(5).max(1000),
+  });
+  app.post('/agents/retention/send', requireAuth, (req, res) => {
+    if (!isStaff(req.user!)) {
+      res.status(403).json({ message: 'Recurso exclusivo da equipe' });
+      return;
+    }
+    const parsed = sendBody.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ message: 'Dados inválidos' });
+      return;
+    }
+    const { petId, tutorId, message } = parsed.data;
+    emit({ rooms: [`user:${tutorId}`], event: 'reminder', payload: { petId, message } });
+    res.json({ sent: true });
+  });
   startIndexer();
   startReminders(emit);
 

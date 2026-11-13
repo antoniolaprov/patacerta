@@ -11,6 +11,10 @@ const schema = z.object({
   JWT_SECRET: z.string().min(1),
   CORS_ORIGINS: z.string().default('http://localhost:5173,http://localhost:4200'),
   CLINIC_TIMEZONE: z.string().default('America/Recife'),
+  /** The agents act through the API, so they reuse its business rules and events. */
+  API_URL: z.string().default('http://localhost:3000/api'),
+  /** Max tool calls in one agent turn (guards against loops). */
+  AGENT_MAX_STEPS: z.coerce.number().int().positive().default(6),
 
   /**
    * `local` runs a multilingual sentence-transformer on this machine (no API key).

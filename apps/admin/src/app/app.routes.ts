@@ -15,6 +15,7 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/patient-detail').then((m) => m.PatientDetailPage),
       },
       { path: 'pendencias', loadComponent: () => import('./pages/pending').then((m) => m.PendingPage) },
+      { path: 'retencao', loadComponent: () => import('./pages/retention').then((m) => m.RetentionPage) },
       {
         path: 'assistente',
         loadComponent: () => import('./pages/assistant-page').then((m) => m.AssistantPage),

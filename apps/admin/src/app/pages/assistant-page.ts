@@ -10,13 +10,14 @@ interface Message {
   sources?: Citation[];
   error?: string;
   pending?: boolean;
+  actions?: { label: string; ok: boolean }[];
 }
 
 const SUGGESTIONS = [
+  'Quanto faturamos este mês e com quais serviços?',
+  'Qual dia da próxima semana está mais vazio?',
+  'Quais clientes não aparecem há mais de 90 dias?',
   'Quais pets estão com vacina atrasada?',
-  'Quem tem histórico de otite?',
-  'Quais pacientes têm alergia alimentar?',
-  'O que temos na agenda de hoje?',
 ];
 
 @Component({
@@ -26,7 +27,7 @@ const SUGGESTIONS = [
     <header class="page-head">
       <div>
         <h1>Assistente da clínica</h1>
-        <p class="muted">Pergunte sobre qualquer paciente, agenda ou pendência. Cada resposta mostra os registros usados.</p>
+        <p class="muted">Pergunte sobre pacientes, agenda, faturamento ou clientes inativos. A Pata consulta o sistema e pode agendar por você.</p>
       </div>
     </header>
 
@@ -44,6 +45,13 @@ const SUGGESTIONS = [
             <p class="bubble bubble--user">{{ m.content }}</p>
           } @else {
             <div class="bubble bubble--pata">
+              @if (m.actions?.length) {
+                <ul class="agent-actions" aria-label="O que a Pata fez">
+                  @for (a of m.actions; track $index) {
+                    <li [class.agent-actions__fail]="!a.ok">{{ a.ok ? '✓' : '!' }} {{ a.label }}</li>
+                  }
+                </ul>
+              }
               @if (m.pending) {
                 <span class="typing" aria-label="Pensando"></span>
               }
@@ -106,9 +114,14 @@ export class AssistantPage implements OnDestroy {
     this.busy.set(true);
     this.abort = new AbortController();
     let answer = '';
+    const actions: { label: string; ok: boolean }[] = [];
     try {
       for await (const e of streamAssistant('/chat', this.auth.token(), { message: question, history }, this.abort.signal)) {
         if (e.type === 'sources') this.patchLast({ sources: e.sources });
+        if (e.type === 'action') {
+          actions.push({ label: e.label, ok: e.ok });
+          this.patchLast({ actions: [...actions] });
+        }
         if (e.type === 'token') {
           answer += e.text;
           this.patchLast({ content: answer, pending: false });

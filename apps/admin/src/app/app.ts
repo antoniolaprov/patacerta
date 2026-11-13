@@ -18,6 +18,7 @@ import { RealtimeService } from './core/realtime';
             <a routerLink="/agenda" routerLinkActive="active">Agenda do dia</a>
             <a routerLink="/pacientes" routerLinkActive="active">Pacientes</a>
             <a routerLink="/pendencias" routerLinkActive="active">Pendências</a>
+            <a routerLink="/retencao" routerLinkActive="active">Retenção com IA</a>
             <a routerLink="/assistente" routerLinkActive="active">Assistente</a>
           </nav>
           <div class="sidebar__foot">

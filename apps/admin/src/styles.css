@@ -774,3 +774,43 @@ textarea:focus {
 .patient-head a {
   margin-left: 6px;
 }
+
+/* Ações executadas pelo agente e página de retenção */
+.agent-actions {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(46, 125, 50, 0.08);
+  font-size: 0.85rem;
+  display: grid;
+  gap: 4px;
+}
+.agent-actions__fail {
+  color: #b42318;
+}
+.retention-list {
+  display: grid;
+  gap: 14px;
+}
+.retention-card {
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: grid;
+  gap: 8px;
+}
+.retention-card textarea {
+  width: 100%;
+  min-height: 84px;
+  font: inherit;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.18);
+}
+.retention-card__actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}

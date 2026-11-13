@@ -12,6 +12,10 @@ O tutor agenda banho, consulta e vacina pelo app, acompanha o atendimento em tem
 
 ## O que tem de interessante aqui
 
+- **Agentes de IA que agem, não só respondem.** A assistente decide qual ação tomar e executa no sistema, com as permissões de quem está usando:
+  - **Agendamento pelo chat (tutor):** "agende um banho para o Thor no sábado de manhã" → consulta o catálogo e a agenda, agenda, remarca ou cancela.
+  - **Copiloto da gestão (clínica):** "quanto faturamos este mês?", "qual dia da semana que vem está mais vazio?", "quem não aparece há 90 dias?" → consulta o banco e responde com números exatos.
+  - **Retenção proativa (clínica):** o agente acha pets com vacina, vermífugo ou exame atrasado sem nada agendado e clientes que sumiram, escreve uma mensagem personalizada a partir do histórico e sugere aproveitar visitas já marcadas ("o Thor já vem para o banho no sábado: dá para aplicar a vacina na mesma visita"). A equipe revisa e envia.
 - **IA contextualizada com os dados do sistema (RAG).** Cada consulta, vacina, banho e agendamento vira um trecho indexado com embeddings numa base vetorial (pgvector). A assistente busca os trechos relevantes, combina com fatos calculados via SQL e responde citando de onde tirou cada informação.
 - **Isolamento de dados na busca.** Um tutor nunca recupera registros de outra família, seja qual for a pergunta: o filtro por tutor é aplicado dentro da consulta vetorial e coberto por testes.
 - **Embeddings rodando localmente.** O modelo de embeddings (multilíngue, ótimo em português) roda no próprio servidor via ONNX. O modelo de linguagem é plugável: Claude pela API, qualquer API compatível com OpenAI (como Groq, com plano gratuito) ou um modelo aberto local com Ollama, deixando tudo offline.
@@ -83,6 +87,25 @@ sequenceDiagram
 4. **Segurança.** Uma checagem determinística detecta sinais de emergência antes do modelo e mostra o telefone da clínica na hora. O prompt proíbe diagnóstico e prescrição.
 5. **Resumo pré-atendimento.** No painel, a veterinária gera um resumo do histórico inteiro do paciente com alergias, condições crônicas, pendências e sugestões para a consulta.
 
+## Como os agentes funcionam
+
+```mermaid
+flowchart LR
+    P["Pedido no chat<br/>ou botão Rodar agente"] --> M["Modelo decide<br/>a próxima ação"]
+    M -- "chama ferramenta" --> T["Ferramentas<br/>(catálogo, agenda, agendar,<br/>cancelar, faturamento,<br/>ocupação, inativos)"]
+    T -- "escritas" --> API["API NestJS<br/>regras, transação, eventos"]
+    T -- "leituras" --> DB[("PostgreSQL")]
+    T -- "resultado ou erro de regra" --> M
+    M -- "responde" --> R["Resposta + lista<br/>do que foi feito"]
+```
+
+1. **Laço do agente** (`apps/ai-service/src/agent.ts`): o modelo recebe a pergunta, os fatos do sistema e a lista de ferramentas; escolhe uma ferramenta, recebe o resultado e repete até responder. Há um limite de passos, e na última rodada as ferramentas são retiradas para o modelo não entrar em laço.
+2. **Escritas passam pela API, com o token do próprio usuário.** O agente agenda e cancela pelos mesmos endpoints do app, então herda as regras de capacidade, a transação serializável, a validação de dono do pet e os eventos em tempo real. Um tutor não consegue agendar para o pet de outra família, peça o que pedir.
+3. **Leituras de gestão são consultas fixas e parametrizadas** (`tools/management.ts`): o modelo escolhe a ferramenta e as datas, nunca escreve SQL.
+4. **Erros viram informação.** Quando a API recusa ("esse horário acabou de ser preenchido"), o erro volta ao modelo como resultado da ferramenta e ele oferece outra opção.
+5. **Degradação graciosa.** Sem chave de modelo ou com o provedor fora do ar, o chat volta a responder no modo RAG e o agente de retenção usa uma mensagem padrão. A tela mostra qual dos dois escreveu cada mensagem.
+6. **Funciona com o plano gratuito do Groq** (padrão), com Claude ou com Ollama local: os três provedores implementam a chamada de ferramentas.
+
 ## Telas
 
 | App do tutor | Painel da clínica |
@@ -144,7 +167,7 @@ npm test
 ```
 
 - **API:** cálculo de horários disponíveis (capacidade, horários passados, fuso) e a regra de pendências que considera só a dose mais recente.
-- **Serviço de IA:** isolamento de dados na busca, montagem dos documentos, seleção de trechos, citações, histórico da conversa, detecção de emergência e embeddings.
+- **Serviço de IA:** isolamento de dados na busca, montagem dos documentos, seleção de trechos, citações, histórico da conversa, detecção de emergência, embeddings e o laço do agente (erro de regra devolvido ao modelo, parâmetros inválidos, ferramenta inexistente e proteção contra laço).
 - **Painel:** renderização das respostas com citações e utilitários de formatação.
 
 O CI no GitHub Actions roda typecheck, testes e build de cada app.
@@ -158,6 +181,8 @@ O CI no GitHub Actions roda typecheck, testes e build de cada app.
 
 ## Próximos passos
 
+- Novos agentes sobre o mesmo motor: estoque e compras (prever demanda pelos ciclos de cada pet), escala da equipe e preenchimento de horários vazios, e leitura de documentos (foto da carteira de vacinação, notas fiscais).
+- Aprovação do dono antes de ações com impacto financeiro (descontos, pedidos de compra).
 - Avaliação automática das respostas da assistente com um conjunto de perguntas de referência.
 - Upload de exames em PDF com extração de texto para o prontuário.
 - Lembretes por WhatsApp usando a API oficial.
