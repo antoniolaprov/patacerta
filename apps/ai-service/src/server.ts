@@ -136,7 +136,8 @@ async function main() {
     }
     const parsed = sendBody.safeParse(req.body);
     if (!parsed.success) {
-      res.status(400).json({ message: 'Dados inválidos' });
+      const fields = parsed.error.issues.map((i) => i.path.join('.') || 'corpo').join(', ');
+      res.status(400).json({ message: `Dados inválidos: ${fields}`, issues: parsed.error.issues });
       return;
     }
     const { petId, tutorId, message } = parsed.data;

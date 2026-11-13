@@ -157,7 +157,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ petId: $('Buscar clientes em risco').item.json.petId, tutorId: $('Buscar clientes em risco').item.json.tutorId, message: $json.output.trim() }) }}",
+        "jsonBody": "={{ JSON.stringify({ petId: $('Buscar clientes em risco').all()[$itemIndex].json.petId, tutorId: $('Buscar clientes em risco').all()[$itemIndex].json.tutorId, message: $json.output.trim() }) }}",
         "options": {}
       }
     },
@@ -178,25 +178,25 @@
               "id": "a1",
               "name": "prioridade",
               "type": "string",
-              "value": "={{ $('Buscar clientes em risco').item.json.priority }}"
+              "value": "={{ $('Buscar clientes em risco').all()[$itemIndex].json.priority }}"
             },
             {
               "id": "a2",
               "name": "pet",
               "type": "string",
-              "value": "={{ $('Buscar clientes em risco').item.json.petName }}"
+              "value": "={{ $('Buscar clientes em risco').all()[$itemIndex].json.petName }}"
             },
             {
               "id": "a3",
               "name": "tutor",
               "type": "string",
-              "value": "={{ $('Buscar clientes em risco').item.json.tutorName }}"
+              "value": "={{ $('Buscar clientes em risco').all()[$itemIndex].json.tutorName }}"
             },
             {
               "id": "a4",
               "name": "motivos",
               "type": "string",
-              "value": "={{ $('Buscar clientes em risco').item.json.reasons.join('; ') }}"
+              "value": "={{ $('Buscar clientes em risco').all()[$itemIndex].json.reasons.join('; ') }}"
             },
             {
               "id": "a5",
@@ -208,7 +208,7 @@
               "id": "a6",
               "name": "abrir_no_whatsapp",
               "type": "string",
-              "value": "={{ $('Buscar clientes em risco').item.json.phone ? 'https://wa.me/55' + $('Buscar clientes em risco').item.json.phone.replace(/\\D/g, '') + '?text=' + encodeURIComponent($json.whatsappText) : 'sem telefone cadastrado' }}"
+              "value": "={{ $('Buscar clientes em risco').all()[$itemIndex].json.phone ? 'https://wa.me/55' + $('Buscar clientes em risco').all()[$itemIndex].json.phone.replace(/\\D/g, '') + '?text=' + encodeURIComponent($json.whatsappText) : 'sem telefone cadastrado' }}"
             }
           ]
         },
