@@ -1,6 +1,6 @@
 import { Component, ElementRef, inject, OnDestroy, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { streamAssistant, type Citation } from '../core/assistant';
+import { streamAssistant, type Citation, type PixCharge } from '../core/assistant';
 import { AuthService } from '../core/auth';
 import { RichText } from '../shared/rich-text';
 
@@ -11,6 +11,7 @@ interface Message {
   error?: string;
   pending?: boolean;
   actions?: { label: string; ok: boolean }[];
+  pix?: PixCharge[];
 }
 
 const SUGGESTIONS = [
@@ -58,6 +59,15 @@ const SUGGESTIONS = [
               @if (m.content) {
                 <pc-rich-text [text]="m.content" [sources]="m.sources ?? []" />
               }
+              @for (c of m.pix ?? []; track $index) {
+                <div class="pix-card">
+                  <p class="pix-card__title">Pix de {{ c.amount }} <span>{{ c.description }}</span></p>
+                  <textarea class="pix-card__code" readonly rows="3" aria-label="Pix copia e cola" [value]="c.code" (focus)="$any($event.target).select()"></textarea>
+                  <button class="btn btn--primary" type="button" (click)="copyPix(c.code)">
+                    {{ copied() === c.code ? 'Copiado!' : 'Copiar código Pix' }}
+                  </button>
+                </div>
+              }
               @if (m.error) {
                 <p class="form-error">{{ m.error }}</p>
               }
@@ -104,6 +114,18 @@ export class AssistantPage implements OnDestroy {
     });
   }
 
+  readonly copied = signal('');
+
+  async copyPix(code: string) {
+    try {
+      await navigator.clipboard.writeText(code);
+      this.copied.set(code);
+      setTimeout(() => this.copied.set(''), 2500);
+    } catch {
+      // Clipboard blocked: the code stays selectable in the box.
+    }
+  }
+
   async ask(question: string) {
     if (!question.trim() || this.busy()) return;
     const history = this.messages()
@@ -115,12 +137,17 @@ export class AssistantPage implements OnDestroy {
     this.abort = new AbortController();
     let answer = '';
     const actions: { label: string; ok: boolean }[] = [];
+    const pix: PixCharge[] = [];
     try {
       for await (const e of streamAssistant('/chat', this.auth.token(), { message: question, history }, this.abort.signal)) {
         if (e.type === 'sources') this.patchLast({ sources: e.sources });
         if (e.type === 'action') {
           actions.push({ label: e.label, ok: e.ok });
           this.patchLast({ actions: [...actions] });
+          if (e.tool === 'gerar_pix' && e.ok && e.data) {
+            pix.push(e.data as PixCharge);
+            this.patchLast({ pix: [...pix] });
+          }
         }
         if (e.type === 'token') {
           answer += e.text;

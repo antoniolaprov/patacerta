@@ -15,6 +15,8 @@ const schema = z.object({
   API_URL: z.string().default('http://localhost:3000/api'),
   /** Tutor app address, used in the link the relationship agent sends on WhatsApp. */
   WEB_URL: z.string().default('http://localhost:5173'),
+  /** n8n webhook of the Pix workflow (n8n/workflows/ferramenta-pix.json). */
+  N8N_PIX_URL: z.string().default('http://localhost:5678/webhook/pix'),
   /** Max tool calls in one agent turn (guards against loops). */
   AGENT_MAX_STEPS: z.coerce.number().int().positive().default(6),
 

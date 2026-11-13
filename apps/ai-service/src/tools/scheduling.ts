@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { defineTool, ToolError } from '../agent.js';
 import { callApi, clinicDateTime } from '../api-client.js';
+import { createPix } from './payments.js';
 
 interface ApiService {
   id: string;
@@ -135,6 +136,6 @@ export const cancel = defineTool({
 });
 
 /** Tutors manage their own pets' agenda; the API enforces ownership. */
-export const tutorTools = [listServices, availableSlots, book, myAppointments, cancel];
+export const tutorTools = [listServices, availableSlots, book, myAppointments, cancel, createPix];
 /** The clinic team can book for any pet. */
-export const staffSchedulingTools = [listServices, availableSlots, book, cancel];
+export const staffSchedulingTools = [listServices, availableSlots, book, cancel, createPix];
