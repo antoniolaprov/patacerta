@@ -10,11 +10,18 @@ export interface Citation {
   date: string | null;
 }
 
+/** Pix charge built by the n8n Pix workflow; the code is pasted in the bank app. */
+export interface PixCharge {
+  amount: string;
+  description: string;
+  code: string;
+}
+
 export type ChatEvent =
   | { type: 'meta'; emergency: boolean; model: string }
   | { type: 'sources'; sources: Citation[] }
   | { type: 'token'; text: string }
-  | { type: 'action'; tool: string; label: string; ok: boolean }
+  | { type: 'action'; tool: string; label: string; ok: boolean; data?: unknown }
   | { type: 'done' }
   | { type: 'error'; message: string };
 

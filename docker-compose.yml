@@ -44,6 +44,7 @@ services:
       DATABASE_URL: postgresql://patacerta:patacerta@postgres:5432/patacerta
       REDIS_URL: redis://redis:6379
       OLLAMA_URL: http://ollama:11434
+      N8N_PIX_URL: http://n8n:5678/webhook/pix
     ports:
       - "4000:4000"
     volumes:
@@ -84,6 +85,11 @@ services:
       # Clinic account the agents act as (seed demo account; change in production).
       PATACERTA_AGENT_EMAIL: ${PATACERTA_AGENT_EMAIL:-admin@patacerta.dev}
       PATACERTA_AGENT_PASSWORD: ${PATACERTA_AGENT_PASSWORD:-patacerta123}
+      # Pix tool (workflow "Ferramenta Pix"): the clinic's key, shown to the payer as the receiver.
+      PIX_KEY: ${PIX_KEY:-}
+      PIX_RECEIVER_NAME: ${PIX_RECEIVER_NAME:-PataCerta}
+      PIX_CITY: ${PIX_CITY:-Recife}
+      PIX_WEBHOOK_URL: http://localhost:5678/webhook/pix
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:

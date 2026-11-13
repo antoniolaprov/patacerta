@@ -67,7 +67,7 @@
         "promptType": "define",
         "text": "={{ $('Mensagem do tutor').item.json.chatInput }}",
         "options": {
-          "systemMessage": "=Você é a Pata, atendente da clínica PataCerta no WhatsApp. Hoje é {{ $now.setZone('America/Recife').setLocale('pt-BR').toFormat(\"cccc, dd/MM/yyyy\") }} (data ISO {{ $now.setZone('America/Recife').toISODate() }}), fuso da clínica -03:00.\n\nComo atender:\n1. Descubra de qual pet o tutor está falando. Use buscar_pet com o nome; se houver mais de um, pergunte o nome do tutor.\n2. Para agendar: use listar_servicos para achar o servico_id, depois horarios_disponiveis com a data (AAAA-MM-DD; converta \"sábado\", \"amanhã\" etc.) e use em agendar exatamente um startsAt retornado. Se o pedido for claro (pet, serviço, dia e período), agende sem pedir confirmação; se faltar algo, pergunte.\n3. Antes de confirmar, consulte pendencias e veja se esse pet tem vacina, vermífugo ou exame atrasado ou vencendo. Se tiver, ofereça UMA vez resolver na mesma visita, agendando o serviço extra logo depois. Se o tutor recusar, não insista.\n4. Se uma ferramenta der erro (ex.: horário preenchido), explique de forma simples e ofereça outro horário.\n5. Depois de agendar, confirme em uma frase: serviço, pet, dia e hora.\n\nRegras: respostas curtas, tom caloroso, português do Brasil. Nunca faça diagnóstico nem indique remédio ou dose. Se o tutor descrever uma emergência (convulsão, envenenamento, falta de ar, sangramento), oriente a ligar para a clínica imediatamente.",
+          "systemMessage": "=Você é a Pata, atendente da clínica PataCerta no WhatsApp. Hoje é {{ $now.setZone('America/Recife').setLocale('pt-BR').toFormat(\"cccc, dd/MM/yyyy\") }} (data ISO {{ $now.setZone('America/Recife').toISODate() }}), fuso da clínica -03:00.\n\nComo atender:\n1. Descubra de qual pet o tutor está falando. Use buscar_pet com o nome; se houver mais de um, pergunte o nome do tutor.\n2. Para agendar: use listar_servicos para achar o servico_id, depois horarios_disponiveis com a data (AAAA-MM-DD; converta \"sábado\", \"amanhã\" etc.) e use em agendar exatamente um startsAt retornado. Se o pedido for claro (pet, serviço, dia e período), agende sem pedir confirmação; se faltar algo, pergunte.\n3. Antes de confirmar, consulte pendencias e veja se esse pet tem vacina, vermífugo ou exame atrasado ou vencendo. Se tiver, ofereça UMA vez resolver na mesma visita, agendando o serviço extra logo depois. Se o tutor recusar, não insista.\n4. Se uma ferramenta der erro (ex.: horário preenchido), explique de forma simples e ofereça outro horário.\n5. Depois de agendar, confirme em uma frase: serviço, pet, dia e hora.\n6. Pagamento: se o tutor pedir para pagar ou pedir o Pix, descubra o agendamento (o que acabou de criar, ou agendamentos_do_dia com a data) e use gerar_pix. Responda com o valor e envie o pix_copia_e_cola EXATAMENTE como veio, sozinho em uma linha, para ele copiar e colar no app do banco. Nunca invente valor nem código.\n\nRegras: respostas curtas, tom caloroso, português do Brasil. Nunca faça diagnóstico nem indique remédio ou dose. Se o tutor descrever uma emergência (convulsão, envenenamento, falta de ar, sangramento), oriente a ligar para a clínica imediatamente.",
           "maxIterations": 12
         }
       },
@@ -125,16 +125,7 @@
         "descriptionType": "manual",
         "toolDescription": "Busca pets pelo nome (ou parte do nome). Retorna id do pet, nome, espécie, raça e dados do tutor.",
         "method": "GET",
-        "url": "={{ $env.PATACERTA_API_URL }}/pets",
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            {
-              "name": "search",
-              "value": "={{ $fromAI('nome', 'Nome do pet, por exemplo Thor', 'string') }}"
-            }
-          ]
-        },
+        "url": "={{ $env.PATACERTA_API_URL }}/pets?search={{ encodeURIComponent($fromAI('nome', 'Nome do pet, por exemplo Thor', 'string')) }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -144,11 +135,11 @@
             }
           ]
         },
-        "options": {},
         "optimizeResponse": true,
         "responseType": "json",
         "fieldsToInclude": "selected",
-        "fields": "id,name,species,breed,tutorId"
+        "fields": "id,name,species,breed,tutorId",
+        "options": {}
       }
     },
     {
@@ -165,11 +156,11 @@
         "toolDescription": "Lista os serviços da clínica (banho, tosa, consulta, vacina, exames) com id, tipo, duração em minutos e preço em centavos.",
         "method": "GET",
         "url": "={{ $env.PATACERTA_API_URL }}/services",
-        "options": {},
         "optimizeResponse": true,
         "responseType": "json",
         "fieldsToInclude": "selected",
-        "fields": "id,name,type,durationMin,priceCents"
+        "fields": "id,name,type,durationMin,priceCents",
+        "options": {}
       }
     },
     {
@@ -183,22 +174,9 @@
       ],
       "parameters": {
         "descriptionType": "manual",
-        "toolDescription": "Horários livres de um serviço em um dia. Cada horário tem startsAt: use exatamente esse valor em agendar.",
+        "toolDescription": "Horários livres de um serviço em um dia. Cada horário tem startsAt (use exatamente esse valor em agendar).",
         "method": "GET",
-        "url": "={{ $env.PATACERTA_API_URL }}/appointments/availability",
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            {
-              "name": "serviceId",
-              "value": "={{ $fromAI('servico_id', 'id do serviço, vindo de listar_servicos', 'string') }}"
-            },
-            {
-              "name": "date",
-              "value": "={{ $fromAI('data', 'Dia no formato AAAA-MM-DD', 'string') }}"
-            }
-          ]
-        },
+        "url": "={{ $env.PATACERTA_API_URL }}/appointments/availability?serviceId={{ encodeURIComponent($fromAI('servico_id', 'id do serviço (de listar_servicos)', 'string')) }}&date={{ encodeURIComponent($fromAI('data', 'Dia no formato AAAA-MM-DD', 'string')) }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -208,11 +186,11 @@
             }
           ]
         },
-        "options": {},
         "optimizeResponse": true,
         "responseType": "json",
         "fieldsToInclude": "selected",
-        "fields": "startsAt"
+        "fields": "startsAt",
+        "options": {}
       }
     },
     {
@@ -240,12 +218,12 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ petId: $fromAI('pet_id', 'id do pet, vindo de buscar_pet', 'string'), serviceId: $fromAI('servico_id', 'id do serviço, vindo de listar_servicos', 'string'), startsAt: $fromAI('inicio', 'startsAt exatamente como veio de horarios_disponiveis', 'string'), notes: $fromAI('observacao', 'Observação para a equipe, ex.: Agendado pelo WhatsApp; usar shampoo de clorexidina', 'string') }) }}",
-        "options": {},
+        "jsonBody": "={\"petId\": {{ JSON.stringify($fromAI('pet_id', 'id do pet (de buscar_pet)', 'string')) }}, \"serviceId\": {{ JSON.stringify($fromAI('servico_id', 'id do serviço (de listar_servicos)', 'string')) }}, \"startsAt\": {{ JSON.stringify($fromAI('inicio', 'startsAt exatamente como veio de horarios_disponiveis', 'string')) }}, \"notes\": {{ JSON.stringify($fromAI('observacao', 'Observação para a equipe, ex.: \\'Agendado pelo WhatsApp; usar shampoo de clorexidina\\'', 'string')) }}}",
         "optimizeResponse": true,
         "responseType": "json",
         "fieldsToInclude": "selected",
-        "fields": "id,startsAt,status"
+        "fields": "id,startsAt,status",
+        "options": {}
       }
     },
     {
@@ -261,16 +239,7 @@
         "descriptionType": "manual",
         "toolDescription": "Vacinas, vermífugos e exames atrasados ou vencendo nos próximos 60 dias, de todos os pets (filtre pelo pet da conversa).",
         "method": "GET",
-        "url": "={{ $env.PATACERTA_API_URL }}/records/due",
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            {
-              "name": "days",
-              "value": "60"
-            }
-          ]
-        },
+        "url": "={{ $env.PATACERTA_API_URL }}/records/due?days=60",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -280,11 +249,70 @@
             }
           ]
         },
-        "options": {},
         "optimizeResponse": true,
         "responseType": "json",
         "fieldsToInclude": "selected",
-        "fields": "petId,title,nextDueDate"
+        "fields": "petId,title,nextDueDate",
+        "options": {}
+      }
+    },
+    {
+      "id": "c2f0c1a2-0002-4a00-9000-000000000012",
+      "name": "agendamentos_do_dia",
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.2,
+      "position": [
+        1420,
+        380
+      ],
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Lista os agendamentos de um dia, cada um com id, pet, serviço e status. Use para achar o id do agendamento quando o tutor pedir o Pix de algo já agendado.",
+        "method": "GET",
+        "url": "={{ $env.PATACERTA_API_URL }}/appointments?date={{ encodeURIComponent($fromAI('data', 'Dia no formato AAAA-MM-DD', 'string')) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Entrar na PataCerta').first().json.accessToken }}"
+            }
+          ]
+        },
+        "optimizeResponse": true,
+        "responseType": "json",
+        "fieldsToInclude": "selected",
+        "fields": "id,startsAt,status,pet,service",
+        "options": {}
+      }
+    },
+    {
+      "id": "c2f0c1a2-0002-4a00-9000-000000000013",
+      "name": "gerar_pix",
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.2,
+      "position": [
+        1580,
+        380
+      ],
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Gera o Pix copia e cola para pagar um agendamento. O valor é o do serviço, calculado pela PataCerta. Devolve ok, valor, descricao e pix_copia_e_cola; se ok for false, explique o erro em `erro`.",
+        "method": "POST",
+        "url": "={{ $env.PIX_WEBHOOK_URL }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Entrar na PataCerta').first().json.accessToken }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"agendamento_id\": {{ JSON.stringify($fromAI('agendamento_id', 'id do agendamento (de agendar ou agendamentos_do_dia)', 'string')) }}}",
+        "options": {}
       }
     }
   ],
@@ -378,6 +406,28 @@
       ]
     },
     "pendencias": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente atendente",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "agendamentos_do_dia": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente atendente",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "gerar_pix": {
       "ai_tool": [
         [
           {

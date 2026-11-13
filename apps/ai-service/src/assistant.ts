@@ -26,7 +26,7 @@ export type AssistantEvent =
   | { type: 'sources'; sources: Citation[] }
   | { type: 'token'; text: string }
   /** Something the agent did in the system (booked, checked the agenda...). */
-  | { type: 'action'; tool: string; label: string; ok: boolean }
+  | { type: 'action'; tool: string; label: string; ok: boolean; data?: unknown }
   | { type: 'done' }
   | { type: 'error'; message: string };
 
@@ -61,6 +61,7 @@ export function agentInstructions(user: AuthUser, pets: PetSummary[], now = new 
 - Cancele só quando o tutor disser claramente qual agendamento.
 - Sugestão na mesma visita: ao agendar para um pet, confira os itens atrasados ou vencendo desse pet (lista acima). Se houver algum, ofereça UMA vez resolver na mesma ida (agendando o serviço extra logo antes ou depois). Se o tutor aceitar, agende os dois; se recusar, não insista.
 - Para encadear dois serviços, o segundo começa quando o primeiro termina (início + duração do serviço, ex.: banho de 60 min às 09:00 → vacina às 10:00). Escolha esse horário na lista de horários livres.
+- Pagamento: se o tutor pedir para pagar ou pedir o Pix, use gerar_pix com o id do agendamento (de meus_agendamentos ou agendar). O código aparece sozinho para ele; só avise o valor e que é só copiar e colar no app do banco. Nunca invente valores nem códigos.
 - Se o histórico pedir um cuidado no atendimento (ex.: shampoo de clorexidina por dermatite), coloque isso na observação do agendamento.${
           outreach
             ? `
@@ -146,7 +147,7 @@ export class Assistant {
         })) {
           if (step.type === 'action') {
             if (step.ok) actions.push(step.label);
-            yield { type: 'action', tool: step.tool, label: step.label, ok: step.ok };
+            yield { type: 'action', tool: step.tool, label: step.label, ok: step.ok, data: step.data };
           } else {
             answer = step.text;
           }

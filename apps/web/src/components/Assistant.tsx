@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { fetchOutreach, streamChat, type ChatTurn, type Citation, type Outreach } from '../lib/chat';
+import { fetchOutreach, streamChat, type ChatTurn, type Citation, type Outreach, type PixCharge } from '../lib/chat';
 import { RichText } from './RichText';
 
 const CLINIC_PHONE = import.meta.env.VITE_CLINIC_PHONE ?? '(81) 3333-0000';
@@ -10,6 +10,31 @@ interface Message extends ChatTurn {
   error?: string;
   pending?: boolean;
   actions?: { label: string; ok: boolean }[];
+  pix?: PixCharge[];
+}
+
+function PixCard({ charge }: { charge: PixCharge }) {
+  const [copied, setCopied] = useState(false);
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(charge.code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    } catch {
+      // Clipboard blocked: the code is selectable in the box below.
+    }
+  }
+  return (
+    <div className="pix-card">
+      <p className="pix-card__title">
+        Pix de {charge.amount} <span>{charge.description}</span>
+      </p>
+      <textarea className="pix-card__code" readOnly rows={3} value={charge.code} aria-label="Pix copia e cola" onFocus={(e) => e.currentTarget.select()} />
+      <button className="btn btn--primary" onClick={copy}>
+        {copied ? 'Copiado!' : 'Copiar código Pix'}
+      </button>
+    </div>
+  );
 }
 
 const SUGGESTIONS = [
@@ -74,6 +99,7 @@ export function Assistant({
 
     let answer = '';
     const actions: { label: string; ok: boolean }[] = [];
+    const pix: PixCharge[] = [];
     try {
       for await (const event of streamChat({ message: question, history, petId }, abort.current.signal)) {
         if (event.type === 'meta') update({ emergency: event.emergency });
@@ -81,6 +107,10 @@ export function Assistant({
         if (event.type === 'action') {
           actions.push({ label: event.label, ok: event.ok });
           update({ actions: [...actions] });
+          if (event.tool === 'gerar_pix' && event.ok && event.data) {
+            pix.push(event.data as PixCharge);
+            update({ pix: [...pix] });
+          }
         }
         if (event.type === 'token') {
           answer += event.text;
@@ -171,6 +201,7 @@ export function Assistant({
               )}
               {m.pending && <span className="typing" aria-label="Pata está digitando" />}
               {m.content && <RichText text={m.content} sources={m.sources} />}
+              {m.pix?.map((c, j) => <PixCard key={j} charge={c} />)}
               {m.error && <p className="bubble__error">{m.error}</p>}
               {!m.pending && m.sources && m.sources.length > 0 && m.content && (
                 <details className="sources">

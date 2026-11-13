@@ -21,6 +21,11 @@ export interface AgentTool<S extends z.ZodType = z.ZodType> {
   run(args: z.infer<S>, ctx: ToolContext): Promise<unknown>;
   /** One line for the "what the agent did" log shown in the apps. */
   describe(args: z.infer<S>, result: unknown): string;
+  /**
+   * Splits the result: `forModel` goes back to the model, `forUser` travels with the
+   * action event so the app can render it (e.g. a Pix code the model must not retype).
+   */
+  present?(result: unknown): { forModel: unknown; forUser: unknown };
 }
 
 /** Builds a tool whose JSON Schema (sent to the model) comes from the zod schema. */
@@ -30,6 +35,7 @@ export function defineTool<S extends z.ZodObject>(tool: {
   schema: S;
   run: AgentTool<S>['run'];
   describe: AgentTool<S>['describe'];
+  present?: AgentTool<S>['present'];
 }): AgentTool {
   const { $schema: _ignored, ...parameters } = z.toJSONSchema(tool.schema) as Record<string, unknown>;
   return {
@@ -37,11 +43,12 @@ export function defineTool<S extends z.ZodObject>(tool: {
     schema: tool.schema,
     run: tool.run,
     describe: tool.describe,
+    present: tool.present,
   } as AgentTool;
 }
 
 export type AgentStep =
-  | { type: 'action'; tool: string; label: string; ok: boolean }
+  | { type: 'action'; tool: string; label: string; ok: boolean; data?: unknown }
   | { type: 'final'; text: string };
 
 export interface RunAgentInput {
@@ -83,6 +90,7 @@ export async function* runAgent({
       let ok = true;
       let content: string;
       let label: string;
+      let data: unknown;
       if (!tool) {
         ok = false;
         label = `Ferramenta desconhecida: ${call.name}`;
@@ -96,7 +104,9 @@ export async function* runAgent({
             );
           }
           const result = await tool.run(parsed.data, ctx);
-          content = JSON.stringify(result);
+          const view = tool.present?.(result);
+          content = JSON.stringify(view ? view.forModel : result);
+          data = view?.forUser;
           label = tool.describe(parsed.data, result);
         } catch (err) {
           ok = false;
@@ -107,7 +117,7 @@ export async function* runAgent({
         }
       }
       convo.push({ role: 'tool', toolCallId: call.id, name: call.name, content, isError: !ok });
-      yield { type: 'action', tool: call.name, label, ok };
+      yield { type: 'action', tool: call.name, label, ok, data };
     }
   }
 }
