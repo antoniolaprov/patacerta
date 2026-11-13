@@ -1,6 +1,8 @@
 import { runAgent, type AgentTool } from './agent.js';
 import { clinicToday } from './api-client.js';
 import type { AuthUser } from './auth.js';
+import { clinicProfile } from './clinic.js';
+import { config } from './config.js';
 import { isStaff } from './auth.js';
 import { accessiblePets, buildFactSheet, mentionedPets, type PetSummary } from './context.js';
 import { pool } from './db.js';
@@ -56,28 +58,54 @@ export function agentInstructions(user: AuthUser, pets: PetSummary[], now = new 
   const ids = pets.map((p) => `- ${p.name}: ${p.id}`).join('\n') || '- nenhum';
   const role =
     user.role === 'TUTOR'
-      ? `Você também AGE no sistema para este tutor: lista serviços, consulta horários, agenda, mostra e cancela agendamentos dos pets dele.
-- Se o pedido for claro (pet, serviço, dia e período), agende sem pedir confirmação. Se faltar algo, pergunte antes.
-- Cancele só quando o tutor disser claramente qual agendamento.
-- Sugestão na mesma visita: ao agendar para um pet, confira os itens atrasados ou vencendo desse pet (lista acima). Se houver algum, ofereça UMA vez resolver na mesma ida (agendando o serviço extra logo antes ou depois). Se o tutor aceitar, agende os dois; se recusar, não insista.
-- Para encadear dois serviços, o segundo começa quando o primeiro termina (início + duração do serviço, ex.: banho de 60 min às 09:00 → vacina às 10:00). Escolha esse horário na lista de horários livres.
-- Pagamento: se o tutor pedir para pagar ou pedir o Pix, use gerar_pix com o id do agendamento (de meus_agendamentos ou agendar). O código aparece sozinho para ele; só avise o valor e que é só copiar e colar no app do banco. Nunca invente valores nem códigos.
-- Se o histórico pedir um cuidado no atendimento (ex.: shampoo de clorexidina por dermatite), coloque isso na observação do agendamento.${
+      ? `COMO A PATA ATENDE O TUTOR
+Você age no sistema por este tutor: lista serviços, consulta horários, agenda, remarca, mostra e cancela agendamentos dos pets dele, e gera o Pix.
+
+Estilo (é uma conversa de WhatsApp):
+- No máximo 3 frases curtas por mensagem, sem títulos nem tabelas, no máximo 1 emoji.
+- Chame o tutor pelo primeiro nome e o pet pelo nome.
+- Datas e horas por extenso: "sábado, 15/11, às 9h".
+
+Agendar:
+1. Descubra pet, serviço, dia e período. Se faltar algo, pergunte uma coisa por vez.
+2. listar_servicos → horarios_disponiveis → agendar, usando em \`inicio\` exatamente um horário retornado. Se o pedido for claro, agende sem pedir confirmação.
+3. Para mudar o horário de algo já agendado, use remarcar_agendamento (não cancele e agende separado).
+4. Para dois ou mais serviços na mesma ida (ex.: banho e vacina), use agendar_pacote: ele encadeia os horários e desfaz tudo se algum falhar.
+5. Cancele só quando o tutor disser claramente qual agendamento.
+6. Se o histórico pedir um cuidado no atendimento (ex.: shampoo de clorexidina por dermatite), escreva isso na observação.
+
+Sugestão na mesma visita (upsell):
+- Só itens atrasados ou que vencem em até 30 dias, do mesmo pet (lista de pendências acima), resolvidos pelo serviço certo (ver SOBRE A CLÍNICA).
+- Ofereça uma vez, com o motivo e o preço. Se o tutor recusar, não repita.
+
+Pagamento: se o tutor pedir para pagar ou pedir o Pix, use gerar_pix com o id do agendamento (de meus_agendamentos, agendar ou agendar_pacote). O código aparece sozinho para ele; só diga o valor e que é copiar e colar no app do banco. Nunca invente valores nem códigos.
+
+Saúde: você não faz diagnóstico nem indica remédio ou dose. Para sintomas, sugira agendar uma consulta. Em emergência (convulsão, envenenamento, falta de ar, sangramento), oriente a ligar já para ${config.CLINIC_PHONE}.
+
+Passe para a equipe ("vou pedir para alguém da equipe te chamar") em reclamação, pedido de desconto ou assunto que as ferramentas não resolvem.
+
+Exemplos de boas respostas:
+- Tutor: "pode ser sábado?" → "Tenho sábado, 15/11, às 8h, 9h e 10h. Qual fica melhor para o Thor? Aproveitando: a antirrábica dele está atrasada e dá para aplicar logo depois do banho, por R$ 90,00."
+- Horário recusado pela agenda → "Esse horário acabou de ser preenchido 😕 Tenho 10h ou 11h, pode ser?"${
           outreach
             ? `
-- A clínica enviou a este tutor, em ${formatDate(outreach.createdAt)}, sobre ${outreach.petName}, a mensagem: "${outreach.message}". Se o tutor responder a esse convite (ex.: "pode ser sábado", "quero"), entenda que é sobre ele e conduza até o agendamento.`
+
+Contexto: a clínica enviou a este tutor, em ${formatDate(outreach.createdAt)}, sobre ${outreach.petName}, a mensagem: "${outreach.message}". Se ele responder a esse convite (ex.: "pode ser sábado", "quero"), entenda que é sobre isso e conduza até o agendamento.`
             : ''
         }`
-      : `Você também AGE como copiloto da gestão: consulta faturamento, ocupação da agenda, agendamentos do dia e clientes inativos, e pode agendar ou cancelar para qualquer pet.
-- Para perguntas de gestão, use as ferramentas em vez de estimar. Traga números exatos e uma recomendação prática curta.
-- Agende ou cancele só quando a pessoa pedir.`;
+      : `COMO O COPILOTO DA GESTÃO RESPONDE À EQUIPE
+- Para gestão, sempre consulte a ferramenta (faturamento, ocupacao_da_agenda, agendamentos_do_dia, clientes_inativos); nunca estime.
+- Diga o período usado ("de 01/11 a 13/11") e traga números exatos.
+- "Este mês" = do dia 1 até hoje. "Semana que vem" = segunda a sábado da próxima semana. Dias fechados não contam como vazios.
+- Formato: 1 frase com a resposta, até 4 tópicos curtos e 1 recomendação prática (ex.: "a terça tem só 2 atendimentos: vale rodar o agente de relacionamento para chamar quem tem banho vencendo").
+- Agende, remarque ou cancele para qualquer pet só quando pedirem.`;
   return `
 
-AÇÕES NO SISTEMA
 ${role}
+
+REGRAS GERAIS
 - Hoje é ${today.weekday}, ${today.iso} (fuso da clínica). Converta "amanhã", "sábado", "semana que vem" em datas AAAA-MM-DD.
-- Para agendar: obtenha o serviço com listar_servicos, consulte horarios_disponiveis e use em \`inicio\` exatamente um horário retornado.
-- Se uma ferramenta devolver erro, explique de forma simples e ofereça alternativas.
+- Se uma ferramenta devolver erro, explique de forma simples e ofereça a alternativa.
 - Depois de agir, confirme em uma frase o que foi feito (serviço, pet, dia e hora).
 IDs dos pets:
 ${ids}`;
@@ -136,11 +164,14 @@ export class Assistant {
       ];
       const actions: string[] = [];
       try {
-        const outreach = isStaff(user) ? null : await latestOutreach(user.id);
+        const [outreach, profile] = await Promise.all([
+          isStaff(user) ? null : latestOutreach(user.id),
+          clinicProfile(),
+        ]);
         let answer = '';
         for await (const step of runAgent({
           llm: this.llm,
-          system: systemPrompt(user, facts) + agentInstructions(user, pets, new Date(), outreach),
+          system: `${systemPrompt(user, facts)}\n\n${profile}${agentInstructions(user, pets, new Date(), outreach)}`,
           messages: agentMessages,
           tools: toolsFor(user),
           ctx: { user, token },

@@ -2,14 +2,20 @@
   "id": "PcRelacionamento",
   "name": "PataCerta · Agente de relacionamento (rotina diária)",
   "active": false,
-  "settings": { "executionOrder": "v1", "timezone": "America/Recife" },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Recife"
+  },
   "nodes": [
     {
       "id": "b1f0c1a2-0001-4a00-9000-000000000001",
       "name": "Nota",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
-      "position": [-60, -260],
+      "position": [
+        -60,
+        -260
+      ],
       "parameters": {
         "width": 900,
         "height": 200,
@@ -21,15 +27,30 @@
       "name": "Todo dia às 9h",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
-      "position": [0, 0],
-      "parameters": { "rule": { "interval": [{ "field": "days", "triggerAtHour": 9 }] } }
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      }
     },
     {
       "id": "b1f0c1a2-0001-4a00-9000-000000000003",
       "name": "Rodar agora",
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,
-      "position": [0, 200],
+      "position": [
+        0,
+        200
+      ],
       "parameters": {}
     },
     {
@@ -37,7 +58,10 @@
       "name": "Entrar na PataCerta",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [240, 100],
+      "position": [
+        240,
+        100
+      ],
       "parameters": {
         "method": "POST",
         "url": "={{ $env.PATACERTA_API_URL }}/auth/login",
@@ -52,13 +76,21 @@
       "name": "Buscar clientes em risco",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [480, 100],
+      "position": [
+        480,
+        100
+      ],
       "parameters": {
         "method": "GET",
         "url": "={{ $env.PATACERTA_AI_URL }}/agents/retention/candidates",
         "sendHeaders": true,
         "headerParameters": {
-          "parameters": [{ "name": "Authorization", "value": "=Bearer {{ $json.accessToken }}" }]
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.accessToken }}"
+            }
+          ]
         },
         "options": {}
       }
@@ -68,12 +100,15 @@
       "name": "Agente redator",
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 3.1,
-      "position": [720, 100],
+      "position": [
+        720,
+        100
+      ],
       "parameters": {
         "promptType": "define",
         "text": "=Tutor: {{ $json.tutorName }}\nPet: {{ $json.petName }} ({{ $json.species }})\nObservações do cadastro: {{ $json.notes || 'nenhuma' }}\nMotivos do contato:\n{{ $json.reasons.map(r => '- ' + r).join('\\n') }}\nServiço sugerido: {{ $json.suggestedService }}\nHistórico recente:\n{{ $json.history || '- sem registros' }}",
         "options": {
-          "systemMessage": "Você é o agente de relacionamento da clínica PataCerta e escreve mensagens de WhatsApp para tutores que a clínica está perdendo.\nTom caloroso e pessoal, português do Brasil, no máximo 3 frases, no máximo um emoji. Cite o pet pelo nome e o motivo do contato.\nSe houver mais de um cuidado pendente, ou se o pet já tiver uma visita marcada, proponha resolver tudo na mesma visita: é mais prático para o tutor e é o objetivo principal da mensagem.\nPode mencionar um detalhe do histórico que mostre cuidado, mas nunca faça diagnóstico nem indique remédio.\nTermine convidando para agendar. Não coloque links (o sistema adiciona). Responda só com o texto da mensagem."
+          "systemMessage": "Você é o agente de relacionamento da clínica PataCerta e escreve UMA mensagem de WhatsApp para um tutor que a clínica está perdendo.\n\nSobre a clínica PataCerta (pet shop e clínica veterinária):\n- Telefone: (81) 3333-0000.\n- Funcionamento: segunda a sexta, das 8h às 18h; sábado, das 8h às 13h; domingo fechado. Não ofereça horário fora disso.\n- Serviços e preços: só os que listar_servicos devolver (priceCents em centavos). Nunca invente serviço, preço ou desconto.\n- Qual serviço resolve cada cuidado: vacinas (V10, V5 felina, antirrábica, gripe canina) → \"Aplicação de vacina\"; vermífugo e retornos → \"Consulta clínica\"; exames de sangue ou urina → \"Exames laboratoriais\"; higiene → \"Banho completo\" ou \"Banho e tosa\".\n- Banho e tosa só para cães e gatos; para roedores e aves, ofereça consulta.\n\nEstrutura (até 350 caracteres, no máximo 3 frases, no máximo 1 emoji):\n1. Cumprimente pelo primeiro nome e diga que é da PataCerta.\n2. Diga o motivo com o nome do pet e a data (ex.: \"a antirrábica do Thor venceu em 29/10\").\n3. Se houver mais de um cuidado pendente, ou uma visita já marcada, proponha resolver tudo na mesma ida. Esse é o objetivo principal.\n4. Termine com um convite simples para agendar.\n\nPor motivo: vacina ou vermífugo atrasado → destaque a proteção do pet, sem alarmismo; vencendo em breve → lembrete gentil; sem visitas há meses → \"sentimos falta\" e sugira o serviço indicado.\nPode citar um detalhe do histórico que mostre cuidado, mas nunca faça diagnóstico, nunca indique remédio e não cite preços. Não use \"prezado\" nem \"querido cliente\". Não coloque links (o sistema adiciona). Responda só com o texto da mensagem."
         }
       }
     },
@@ -82,23 +117,42 @@
       "name": "Modelo Groq",
       "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
       "typeVersion": 1,
-      "position": [720, 320],
-      "parameters": { "model": "openai/gpt-oss-20b", "options": { "temperature": 0.4 } },
-      "credentials": { "groqApi": { "id": "PcGroqCredential", "name": "Groq (PataCerta)" } }
+      "position": [
+        720,
+        320
+      ],
+      "parameters": {
+        "model": "openai/gpt-oss-20b",
+        "options": {
+          "temperature": 0.4
+        }
+      },
+      "credentials": {
+        "groqApi": {
+          "id": "PcGroqCredential",
+          "name": "Groq (PataCerta)"
+        }
+      }
     },
     {
       "id": "b1f0c1a2-0001-4a00-9000-000000000008",
       "name": "Registrar na PataCerta",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1080, 100],
+      "position": [
+        1080,
+        100
+      ],
       "parameters": {
         "method": "POST",
         "url": "={{ $env.PATACERTA_AI_URL }}/agents/retention/send",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Authorization", "value": "=Bearer {{ $('Entrar na PataCerta').first().json.accessToken }}" }
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Entrar na PataCerta').first().json.accessToken }}"
+            }
           ]
         },
         "sendBody": true,
@@ -112,16 +166,44 @@
       "name": "Mensagens prontas para o WhatsApp",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [1320, 100],
+      "position": [
+        1320,
+        100
+      ],
       "parameters": {
         "mode": "manual",
         "assignments": {
           "assignments": [
-            { "id": "a1", "name": "prioridade", "type": "string", "value": "={{ $('Buscar clientes em risco').item.json.priority }}" },
-            { "id": "a2", "name": "pet", "type": "string", "value": "={{ $('Buscar clientes em risco').item.json.petName }}" },
-            { "id": "a3", "name": "tutor", "type": "string", "value": "={{ $('Buscar clientes em risco').item.json.tutorName }}" },
-            { "id": "a4", "name": "motivos", "type": "string", "value": "={{ $('Buscar clientes em risco').item.json.reasons.join('; ') }}" },
-            { "id": "a5", "name": "mensagem", "type": "string", "value": "={{ $json.whatsappText }}" },
+            {
+              "id": "a1",
+              "name": "prioridade",
+              "type": "string",
+              "value": "={{ $('Buscar clientes em risco').item.json.priority }}"
+            },
+            {
+              "id": "a2",
+              "name": "pet",
+              "type": "string",
+              "value": "={{ $('Buscar clientes em risco').item.json.petName }}"
+            },
+            {
+              "id": "a3",
+              "name": "tutor",
+              "type": "string",
+              "value": "={{ $('Buscar clientes em risco').item.json.tutorName }}"
+            },
+            {
+              "id": "a4",
+              "name": "motivos",
+              "type": "string",
+              "value": "={{ $('Buscar clientes em risco').item.json.reasons.join('; ') }}"
+            },
+            {
+              "id": "a5",
+              "name": "mensagem",
+              "type": "string",
+              "value": "={{ $json.whatsappText }}"
+            },
             {
               "id": "a6",
               "name": "abrir_no_whatsapp",
@@ -135,12 +217,82 @@
     }
   ],
   "connections": {
-    "Todo dia às 9h": { "main": [[{ "node": "Entrar na PataCerta", "type": "main", "index": 0 }]] },
-    "Rodar agora": { "main": [[{ "node": "Entrar na PataCerta", "type": "main", "index": 0 }]] },
-    "Entrar na PataCerta": { "main": [[{ "node": "Buscar clientes em risco", "type": "main", "index": 0 }]] },
-    "Buscar clientes em risco": { "main": [[{ "node": "Agente redator", "type": "main", "index": 0 }]] },
-    "Modelo Groq": { "ai_languageModel": [[{ "node": "Agente redator", "type": "ai_languageModel", "index": 0 }]] },
-    "Agente redator": { "main": [[{ "node": "Registrar na PataCerta", "type": "main", "index": 0 }]] },
-    "Registrar na PataCerta": { "main": [[{ "node": "Mensagens prontas para o WhatsApp", "type": "main", "index": 0 }]] }
+    "Todo dia às 9h": {
+      "main": [
+        [
+          {
+            "node": "Entrar na PataCerta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rodar agora": {
+      "main": [
+        [
+          {
+            "node": "Entrar na PataCerta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Entrar na PataCerta": {
+      "main": [
+        [
+          {
+            "node": "Buscar clientes em risco",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar clientes em risco": {
+      "main": [
+        [
+          {
+            "node": "Agente redator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Modelo Groq": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Agente redator",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agente redator": {
+      "main": [
+        [
+          {
+            "node": "Registrar na PataCerta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar na PataCerta": {
+      "main": [
+        [
+          {
+            "node": "Mensagens prontas para o WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
   }
 }

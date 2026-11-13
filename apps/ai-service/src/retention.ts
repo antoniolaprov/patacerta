@@ -1,3 +1,4 @@
+import { clinicProfile } from './clinic.js';
 import { pool } from './db.js';
 import { formatDate } from './documents.js';
 import type { LlmProvider } from './llm.js';
@@ -194,10 +195,22 @@ async function writeMessage(
   history: string,
 ) {
   const res = await llm.complete({
-    system: `Você escreve mensagens de WhatsApp da clínica PataCerta para tutores. Tom caloroso e pessoal, português do Brasil, no máximo 3 frases, sem emojis em excesso. Cite o pet pelo nome e o motivo do contato.
-Se houver mais de um cuidado pendente, ou se o pet já tiver uma visita marcada, proponha resolver tudo na mesma visita: é mais prático para o tutor e é o principal objetivo da mensagem.
-Pode mencionar um detalhe do histórico que mostre cuidado (ex.: uma condição acompanhada), mas nunca faça diagnóstico nem indique remédio.
-Termine convidando para agendar. Não coloque links (o sistema adiciona). Responda só com o texto da mensagem.`,
+    system: `Você é o agente de relacionamento da clínica e escreve UMA mensagem de WhatsApp para um tutor que a clínica está perdendo.
+
+${await clinicProfile()}
+
+Estrutura (até 350 caracteres, no máximo 3 frases, no máximo 1 emoji):
+1. Cumprimente pelo primeiro nome e diga que é da clínica.
+2. Diga o motivo com o nome do pet e a data (ex.: "a antirrábica do Thor venceu em 29/10").
+3. Se houver mais de um cuidado pendente, ou uma visita já marcada, proponha resolver tudo na mesma ida. Esse é o objetivo principal da mensagem.
+4. Termine com um convite simples para agendar.
+
+Por motivo:
+- Vacina ou vermífugo atrasado: destaque a proteção do pet, sem alarmismo.
+- Vencendo em breve: tom de lembrete gentil.
+- Sem visitas há meses: "sentimos falta", e sugira o serviço indicado.
+
+Pode citar um detalhe do histórico que mostre cuidado (ex.: a dermatite acompanhada), mas nunca faça diagnóstico, nunca indique remédio e não cite preços (a Pata informa no chat). Não use "prezado" nem "querido cliente". Não coloque links (o sistema adiciona). Responda só com o texto da mensagem.`,
     messages: [
       {
         role: 'user',

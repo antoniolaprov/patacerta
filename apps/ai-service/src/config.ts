@@ -11,6 +11,11 @@ const schema = z.object({
   JWT_SECRET: z.string().min(1),
   CORS_ORIGINS: z.string().default('http://localhost:5173,http://localhost:4200'),
   CLINIC_TIMEZONE: z.string().default('America/Recife'),
+  /** Clinic profile used in the agents' prompts. */
+  CLINIC_NAME: z.string().default('PataCerta'),
+  CLINIC_PHONE: z.string().default('(81) 3333-0000'),
+  /** Opening hours by ISO weekday (1 = Monday ... 7 = Sunday); same format the API enforces. */
+  CLINIC_HOURS: z.string().default('1-5=8-18,6=8-13'),
   /** The agents act through the API, so they reuse its business rules and events. */
   API_URL: z.string().default('http://localhost:3000/api'),
   /** Tutor app address, used in the link the relationship agent sends on WhatsApp. */
