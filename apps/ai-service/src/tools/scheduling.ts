@@ -64,7 +64,7 @@ export const availableSlots = defineTool({
     );
     return {
       data,
-      horarios: slots.slice(0, 16).map((s) => ({ inicio: s.startsAt, quando: clinicDateTime(s.startsAt), vagas: s.available })),
+      horarios: slots.slice(0, 12).map((s) => ({ inicio: s.startsAt, quando: clinicDateTime(s.startsAt) })),
       total_livres: slots.length,
     };
   },

@@ -221,18 +221,36 @@ class OpenAICompatibleProvider implements LlmProvider {
     'content-type': 'application/json',
     authorization: `Bearer ${config.OPENAI_API_KEY ?? ''}`,
   };
+  /** gpt-oss models think before answering; "low" keeps turns fast and within free-tier limits. */
+  private readonly extra = config.OPENAI_MODEL.includes('gpt-oss') ? { reasoning_effort: 'low' } : {};
+
+  /**
+   * POST with a short wait-and-retry on rate limits (429) and overload (503).
+   * Free tiers cap tokens per minute; an agent turn makes several calls in a row.
+   */
+  private async post(body: Record<string, unknown>) {
+    for (let attempt = 0; ; attempt++) {
+      const res = await fetch(this.url, {
+        method: 'POST',
+        headers: this.headers,
+        body: JSON.stringify({ ...body, ...this.extra }),
+      });
+      if ((res.status !== 429 && res.status !== 503) || attempt >= 3) return res;
+      const detail = await res.text().catch(() => '');
+      const hinted = Number(res.headers.get('retry-after')) || Number(/try again in ([\d.]+)s/i.exec(detail)?.[1]);
+      const waitMs = Math.min(Number.isFinite(hinted) && hinted > 0 ? hinted * 1000 + 300 : 2000 * (attempt + 1), 20_000);
+      console.warn(`[llm] limite do provedor (${res.status}), nova tentativa em ${Math.round(waitMs / 100) / 10}s`);
+      await new Promise((r) => setTimeout(r, waitMs));
+    }
+  }
 
   async *stream({ system, messages, maxTokens = 1024 }: LlmRequest) {
-    const res = await fetch(this.url, {
-      method: 'POST',
-      headers: this.headers,
-      body: JSON.stringify({
-        model: config.OPENAI_MODEL,
-        stream: true,
-        max_tokens: maxTokens,
-        temperature: 0.2,
-        messages: [{ role: 'system', content: system }, ...messages],
-      }),
+    const res = await this.post({
+      model: config.OPENAI_MODEL,
+      stream: true,
+      max_tokens: maxTokens,
+      temperature: 0.2,
+      messages: [{ role: 'system', content: system }, ...messages],
     });
     if (!res.ok || !res.body) {
       const detail = await res.text().catch(() => '');
@@ -258,10 +276,7 @@ class OpenAICompatibleProvider implements LlmProvider {
   }
 
   async complete({ system, messages, tools = [], maxTokens = 2048 }: CompleteRequest) {
-    const res = await fetch(this.url, {
-      method: 'POST',
-      headers: this.headers,
-      body: JSON.stringify({
+    const res = await this.post({
         model: config.OPENAI_MODEL,
         max_tokens: maxTokens,
         temperature: 0.2,
@@ -290,7 +305,6 @@ class OpenAICompatibleProvider implements LlmProvider {
                 : m,
           ),
         ],
-      }),
     });
     if (!res.ok) {
       const detail = await res.text().catch(() => '');

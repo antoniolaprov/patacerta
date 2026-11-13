@@ -60,6 +60,7 @@ export function agentInstructions(user: AuthUser, pets: PetSummary[], now = new 
 - Se o pedido for claro (pet, serviço, dia e período), agende sem pedir confirmação. Se faltar algo, pergunte antes.
 - Cancele só quando o tutor disser claramente qual agendamento.
 - Sugestão na mesma visita: ao agendar para um pet, confira os itens atrasados ou vencendo desse pet (lista acima). Se houver algum, ofereça UMA vez resolver na mesma ida (agendando o serviço extra logo antes ou depois). Se o tutor aceitar, agende os dois; se recusar, não insista.
+- Para encadear dois serviços, o segundo começa quando o primeiro termina (início + duração do serviço, ex.: banho de 60 min às 09:00 → vacina às 10:00). Escolha esse horário na lista de horários livres.
 - Se o histórico pedir um cuidado no atendimento (ex.: shampoo de clorexidina por dermatite), coloque isso na observação do agendamento.${
           outreach
             ? `
@@ -125,8 +126,13 @@ export class Assistant {
       { role: 'user', content: userPrompt(question, chunks) },
     ];
 
-    // Agent mode: the model may call tools before answering.
+    // Agent mode: the model may call tools before answering. Each tool round resends
+    // the context, so it carries only the strongest sources (keeps free tiers usable).
     if (token) {
+      const agentMessages: ChatTurn[] = [
+        ...trimHistory(history),
+        { role: 'user', content: userPrompt(question, chunks.slice(0, 3)) },
+      ];
       const actions: string[] = [];
       try {
         const outreach = isStaff(user) ? null : await latestOutreach(user.id);
@@ -134,7 +140,7 @@ export class Assistant {
         for await (const step of runAgent({
           llm: this.llm,
           system: systemPrompt(user, facts) + agentInstructions(user, pets, new Date(), outreach),
-          messages,
+          messages: agentMessages,
           tools: toolsFor(user),
           ctx: { user, token },
         })) {
