@@ -1,5 +1,15 @@
-export const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api';
-export const AI_URL = import.meta.env.VITE_AI_URL ?? 'http://localhost:4000';
+/**
+ * In GitHub Codespaces each port has its own address
+ * (https://<codespace>-5173.app.github.dev); the services live on the sibling ports.
+ */
+function codespacesUrl(port: number) {
+  const m = /^(.+)-\d+\.(app\.github\.dev)$/.exec(window.location.hostname);
+  return m ? `https://${m[1]}-${port}.${m[2]}` : null;
+}
+
+export const API_URL =
+  import.meta.env.VITE_API_URL ?? (codespacesUrl(3000) ? `${codespacesUrl(3000)}/api` : 'http://localhost:3000/api');
+export const AI_URL = import.meta.env.VITE_AI_URL ?? codespacesUrl(4000) ?? 'http://localhost:4000';
 
 const TOKEN_KEY = 'patacerta.token';
 

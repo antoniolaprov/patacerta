@@ -1,0 +1,23 @@
+{
+  "name": "PataCerta",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:22",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+  "hostRequirements": { "cpus": 4 },
+  "secrets": {
+    "OPENAI_API_KEY": {
+      "description": "Chave grátis do Groq para os agentes de IA (crie em console.groq.com > API Keys)"
+    }
+  },
+  "postCreateCommand": "bash scripts/codespaces.sh",
+  "forwardPorts": [4200, 5173, 3000, 4000, 5678],
+  "portsAttributes": {
+    "4200": { "label": "Painel da clínica" },
+    "5173": { "label": "App do tutor" },
+    "3000": { "label": "API" },
+    "4000": { "label": "Serviço de IA" },
+    "5678": { "label": "n8n" }
+  }
+}
