@@ -32,7 +32,8 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       const id = nextId.current++;
       setToasts((t) => [...t.slice(-3), { id, message, tone }]);
       setVersion((v) => v + 1);
-      setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 7000);
+      // Reminders from the clinic stay longer: the tutor needs time to read and act.
+      setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), tone === 'alert' ? 30_000 : 7000);
     };
 
     socket.on('appointment:updated', (p: { message: string }) => push(p.message));
