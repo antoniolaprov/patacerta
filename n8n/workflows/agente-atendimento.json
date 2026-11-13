@@ -2,14 +2,20 @@
   "id": "PcAtendimento",
   "name": "PataCerta · Agente de atendimento (WhatsApp)",
   "active": false,
-  "settings": { "executionOrder": "v1", "timezone": "America/Recife" },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Recife"
+  },
   "nodes": [
     {
       "id": "c2f0c1a2-0002-4a00-9000-000000000001",
       "name": "Nota",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
-      "position": [-60, -300],
+      "position": [
+        -60,
+        -300
+      ],
       "parameters": {
         "width": 1000,
         "height": 220,
@@ -21,16 +27,24 @@
       "name": "Mensagem do tutor",
       "type": "@n8n/n8n-nodes-langchain.chatTrigger",
       "typeVersion": 1.3,
-      "position": [0, 100],
+      "position": [
+        0,
+        100
+      ],
       "webhookId": "6f0f3c1e-5a3b-4d2a-9b7e-2c1d0a9e8f10",
-      "parameters": { "options": {} }
+      "parameters": {
+        "options": {}
+      }
     },
     {
       "id": "c2f0c1a2-0002-4a00-9000-000000000003",
       "name": "Entrar na PataCerta",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [240, 100],
+      "position": [
+        240,
+        100
+      ],
       "parameters": {
         "method": "POST",
         "url": "={{ $env.PATACERTA_API_URL }}/auth/login",
@@ -45,7 +59,10 @@
       "name": "Agente atendente",
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 3.1,
-      "position": [520, 100],
+      "position": [
+        520,
+        100
+      ],
       "parameters": {
         "promptType": "define",
         "text": "={{ $('Mensagem do tutor').item.json.chatInput }}",
@@ -60,16 +77,32 @@
       "name": "Modelo Groq",
       "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
       "typeVersion": 1,
-      "position": [300, 380],
-      "parameters": { "model": "openai/gpt-oss-20b", "options": { "temperature": 0.2 } },
-      "credentials": { "groqApi": { "id": "PcGroqCredential", "name": "Groq (PataCerta)" } }
+      "position": [
+        300,
+        380
+      ],
+      "parameters": {
+        "model": "openai/gpt-oss-20b",
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "credentials": {
+        "groqApi": {
+          "id": "PcGroqCredential",
+          "name": "Groq (PataCerta)"
+        }
+      }
     },
     {
       "id": "c2f0c1a2-0002-4a00-9000-000000000006",
       "name": "Memória da conversa",
       "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
       "typeVersion": 1.3,
-      "position": [460, 380],
+      "position": [
+        460,
+        380
+      ],
       "parameters": {
         "sessionIdType": "customKey",
         "sessionKey": "={{ $('Mensagem do tutor').item.json.sessionId }}",
@@ -79,117 +112,258 @@
     {
       "id": "c2f0c1a2-0002-4a00-9000-000000000007",
       "name": "buscar_pet",
-      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
-      "typeVersion": 1.1,
-      "position": [620, 380],
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.2,
+      "position": [
+        620,
+        380
+      ],
       "parameters": {
+        "descriptionType": "manual",
         "toolDescription": "Busca pets pelo nome (ou parte do nome). Retorna id do pet, nome, espécie, raça e dados do tutor.",
         "method": "GET",
-        "url": "={{ $env.PATACERTA_API_URL }}/pets?search={nome}",
-        "sendHeaders": true,
-        "parametersHeaders": {
-          "values": [
-            { "name": "Authorization", "valueProvider": "fieldValue", "value": "=Bearer {{ $('Entrar na PataCerta').item.json.accessToken }}" }
+        "url": "={{ $env.PATACERTA_API_URL }}/pets",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "search",
+              "value": "={{ $fromAI('nome', 'Nome do pet, por exemplo Thor', 'string') }}"
+            }
           ]
         },
-        "placeholderDefinitions": {
-          "values": [{ "name": "nome", "description": "Nome do pet, por exemplo Thor", "type": "string" }]
-        }
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Entrar na PataCerta').first().json.accessToken }}"
+            }
+          ]
+        },
+        "options": {}
       }
     },
     {
       "id": "c2f0c1a2-0002-4a00-9000-000000000008",
       "name": "listar_servicos",
-      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
-      "typeVersion": 1.1,
-      "position": [780, 380],
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.2,
+      "position": [
+        780,
+        380
+      ],
       "parameters": {
+        "descriptionType": "manual",
         "toolDescription": "Lista os serviços da clínica (banho, tosa, consulta, vacina, exames) com id, tipo, duração em minutos e preço em centavos.",
         "method": "GET",
-        "url": "={{ $env.PATACERTA_API_URL }}/services"
+        "url": "={{ $env.PATACERTA_API_URL }}/services",
+        "options": {}
       }
     },
     {
       "id": "c2f0c1a2-0002-4a00-9000-000000000009",
       "name": "horarios_disponiveis",
-      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
-      "typeVersion": 1.1,
-      "position": [940, 380],
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.2,
+      "position": [
+        940,
+        380
+      ],
       "parameters": {
-        "toolDescription": "Horários livres de um serviço em um dia. Cada horário tem startsAt (use exatamente esse valor em agendar).",
+        "descriptionType": "manual",
+        "toolDescription": "Horários livres de um serviço em um dia. Cada horário tem startsAt: use exatamente esse valor em agendar.",
         "method": "GET",
-        "url": "={{ $env.PATACERTA_API_URL }}/appointments/availability?serviceId={servico_id}&date={data}",
-        "sendHeaders": true,
-        "parametersHeaders": {
-          "values": [
-            { "name": "Authorization", "valueProvider": "fieldValue", "value": "=Bearer {{ $('Entrar na PataCerta').item.json.accessToken }}" }
+        "url": "={{ $env.PATACERTA_API_URL }}/appointments/availability",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "serviceId",
+              "value": "={{ $fromAI('servico_id', 'id do serviço, vindo de listar_servicos', 'string') }}"
+            },
+            {
+              "name": "date",
+              "value": "={{ $fromAI('data', 'Dia no formato AAAA-MM-DD', 'string') }}"
+            }
           ]
         },
-        "placeholderDefinitions": {
-          "values": [
-            { "name": "servico_id", "description": "id do serviço (de listar_servicos)", "type": "string" },
-            { "name": "data", "description": "Dia no formato AAAA-MM-DD", "type": "string" }
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Entrar na PataCerta').first().json.accessToken }}"
+            }
           ]
-        }
+        },
+        "options": {}
       }
     },
     {
       "id": "c2f0c1a2-0002-4a00-9000-000000000010",
       "name": "agendar",
-      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
-      "typeVersion": 1.1,
-      "position": [1100, 380],
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.2,
+      "position": [
+        1100,
+        380
+      ],
       "parameters": {
+        "descriptionType": "manual",
         "toolDescription": "Cria o agendamento. A PataCerta valida capacidade e conflitos; se recusar, a resposta traz o motivo.",
         "method": "POST",
         "url": "={{ $env.PATACERTA_API_URL }}/appointments",
         "sendHeaders": true,
-        "parametersHeaders": {
-          "values": [
-            { "name": "Authorization", "valueProvider": "fieldValue", "value": "=Bearer {{ $('Entrar na PataCerta').item.json.accessToken }}" }
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Entrar na PataCerta').first().json.accessToken }}"
+            }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "{\"petId\": \"{pet_id}\", \"serviceId\": \"{servico_id}\", \"startsAt\": \"{inicio}\", \"notes\": \"{observacao}\"}",
-        "placeholderDefinitions": {
-          "values": [
-            { "name": "pet_id", "description": "id do pet (de buscar_pet)", "type": "string" },
-            { "name": "servico_id", "description": "id do serviço (de listar_servicos)", "type": "string" },
-            { "name": "inicio", "description": "startsAt exatamente como veio de horarios_disponiveis", "type": "string" },
-            { "name": "observacao", "description": "Observação para a equipe, ex.: 'Agendado pelo WhatsApp; usar shampoo de clorexidina'", "type": "string" }
-          ]
-        }
+        "jsonBody": "={{ JSON.stringify({ petId: $fromAI('pet_id', 'id do pet, vindo de buscar_pet', 'string'), serviceId: $fromAI('servico_id', 'id do serviço, vindo de listar_servicos', 'string'), startsAt: $fromAI('inicio', 'startsAt exatamente como veio de horarios_disponiveis', 'string'), notes: $fromAI('observacao', 'Observação para a equipe, ex.: Agendado pelo WhatsApp; usar shampoo de clorexidina', 'string') }) }}",
+        "options": {}
       }
     },
     {
       "id": "c2f0c1a2-0002-4a00-9000-000000000011",
       "name": "pendencias",
-      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
-      "typeVersion": 1.1,
-      "position": [1260, 380],
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.2,
+      "position": [
+        1260,
+        380
+      ],
       "parameters": {
+        "descriptionType": "manual",
         "toolDescription": "Vacinas, vermífugos e exames atrasados ou vencendo nos próximos 60 dias, de todos os pets (filtre pelo pet da conversa).",
         "method": "GET",
-        "url": "={{ $env.PATACERTA_API_URL }}/records/due?days=60",
-        "sendHeaders": true,
-        "parametersHeaders": {
-          "values": [
-            { "name": "Authorization", "valueProvider": "fieldValue", "value": "=Bearer {{ $('Entrar na PataCerta').item.json.accessToken }}" }
+        "url": "={{ $env.PATACERTA_API_URL }}/records/due",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "days",
+              "value": "60"
+            }
           ]
-        }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Entrar na PataCerta').first().json.accessToken }}"
+            }
+          ]
+        },
+        "options": {}
       }
     }
   ],
   "connections": {
-    "Mensagem do tutor": { "main": [[{ "node": "Entrar na PataCerta", "type": "main", "index": 0 }]] },
-    "Entrar na PataCerta": { "main": [[{ "node": "Agente atendente", "type": "main", "index": 0 }]] },
-    "Modelo Groq": { "ai_languageModel": [[{ "node": "Agente atendente", "type": "ai_languageModel", "index": 0 }]] },
-    "Memória da conversa": { "ai_memory": [[{ "node": "Agente atendente", "type": "ai_memory", "index": 0 }]] },
-    "buscar_pet": { "ai_tool": [[{ "node": "Agente atendente", "type": "ai_tool", "index": 0 }]] },
-    "listar_servicos": { "ai_tool": [[{ "node": "Agente atendente", "type": "ai_tool", "index": 0 }]] },
-    "horarios_disponiveis": { "ai_tool": [[{ "node": "Agente atendente", "type": "ai_tool", "index": 0 }]] },
-    "agendar": { "ai_tool": [[{ "node": "Agente atendente", "type": "ai_tool", "index": 0 }]] },
-    "pendencias": { "ai_tool": [[{ "node": "Agente atendente", "type": "ai_tool", "index": 0 }]] }
+    "Mensagem do tutor": {
+      "main": [
+        [
+          {
+            "node": "Entrar na PataCerta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Entrar na PataCerta": {
+      "main": [
+        [
+          {
+            "node": "Agente atendente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Modelo Groq": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Agente atendente",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Memória da conversa": {
+      "ai_memory": [
+        [
+          {
+            "node": "Agente atendente",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "buscar_pet": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente atendente",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "listar_servicos": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente atendente",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "horarios_disponiveis": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente atendente",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "agendar": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente atendente",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "pendencias": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente atendente",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
   }
 }
