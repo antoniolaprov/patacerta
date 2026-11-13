@@ -70,7 +70,10 @@
           "systemMessage": "=Você é a Pata, atendente da clínica PataCerta no WhatsApp. Hoje é {{ $now.setZone('America/Recife').setLocale('pt-BR').toFormat(\"cccc, dd/MM/yyyy\") }} (data ISO {{ $now.setZone('America/Recife').toISODate() }}), fuso da clínica -03:00.\n\nComo atender:\n1. Descubra de qual pet o tutor está falando. Use buscar_pet com o nome; se houver mais de um, pergunte o nome do tutor.\n2. Para agendar: use listar_servicos para achar o servico_id, depois horarios_disponiveis com a data (AAAA-MM-DD; converta \"sábado\", \"amanhã\" etc.) e use em agendar exatamente um startsAt retornado. Se o pedido for claro (pet, serviço, dia e período), agende sem pedir confirmação; se faltar algo, pergunte.\n3. Antes de confirmar, consulte pendencias e veja se esse pet tem vacina, vermífugo ou exame atrasado ou vencendo. Se tiver, ofereça UMA vez resolver na mesma visita, agendando o serviço extra logo depois. Se o tutor recusar, não insista.\n4. Se uma ferramenta der erro (ex.: horário preenchido), explique de forma simples e ofereça outro horário.\n5. Depois de agendar, confirme em uma frase: serviço, pet, dia e hora.\n\nRegras: respostas curtas, tom caloroso, português do Brasil. Nunca faça diagnóstico nem indique remédio ou dose. Se o tutor descrever uma emergência (convulsão, envenenamento, falta de ar, sangramento), oriente a ligar para a clínica imediatamente.",
           "maxIterations": 12
         }
-      }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
     },
     {
       "id": "c2f0c1a2-0002-4a00-9000-000000000005",
@@ -106,7 +109,7 @@
       "parameters": {
         "sessionIdType": "customKey",
         "sessionKey": "={{ $('Mensagem do tutor').item.json.sessionId }}",
-        "contextWindowLength": 12
+        "contextWindowLength": 6
       }
     },
     {
@@ -141,7 +144,11 @@
             }
           ]
         },
-        "options": {}
+        "options": {},
+        "optimizeResponse": true,
+        "responseType": "json",
+        "fieldsToInclude": "selected",
+        "fields": "id,name,species,breed,tutorId"
       }
     },
     {
@@ -158,7 +165,11 @@
         "toolDescription": "Lista os serviços da clínica (banho, tosa, consulta, vacina, exames) com id, tipo, duração em minutos e preço em centavos.",
         "method": "GET",
         "url": "={{ $env.PATACERTA_API_URL }}/services",
-        "options": {}
+        "options": {},
+        "optimizeResponse": true,
+        "responseType": "json",
+        "fieldsToInclude": "selected",
+        "fields": "id,name,type,durationMin,priceCents"
       }
     },
     {
@@ -197,7 +208,11 @@
             }
           ]
         },
-        "options": {}
+        "options": {},
+        "optimizeResponse": true,
+        "responseType": "json",
+        "fieldsToInclude": "selected",
+        "fields": "startsAt"
       }
     },
     {
@@ -226,7 +241,11 @@
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ petId: $fromAI('pet_id', 'id do pet, vindo de buscar_pet', 'string'), serviceId: $fromAI('servico_id', 'id do serviço, vindo de listar_servicos', 'string'), startsAt: $fromAI('inicio', 'startsAt exatamente como veio de horarios_disponiveis', 'string'), notes: $fromAI('observacao', 'Observação para a equipe, ex.: Agendado pelo WhatsApp; usar shampoo de clorexidina', 'string') }) }}",
-        "options": {}
+        "options": {},
+        "optimizeResponse": true,
+        "responseType": "json",
+        "fieldsToInclude": "selected",
+        "fields": "id,startsAt,status"
       }
     },
     {
@@ -261,7 +280,11 @@
             }
           ]
         },
-        "options": {}
+        "options": {},
+        "optimizeResponse": true,
+        "responseType": "json",
+        "fieldsToInclude": "selected",
+        "fields": "petId,title,nextDueDate"
       }
     }
   ],
