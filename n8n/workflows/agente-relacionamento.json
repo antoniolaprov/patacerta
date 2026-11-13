@@ -157,7 +157,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ petId: $('Buscar clientes em risco').all()[$itemIndex].json.petId, tutorId: $('Buscar clientes em risco').all()[$itemIndex].json.tutorId, message: $json.output.trim() }) }}",
+        "jsonBody": "={{ JSON.stringify({ petId: $('Buscar clientes em risco').all()[$itemIndex].json.petId, tutorId: $('Buscar clientes em risco').all()[$itemIndex].json.tutorId, message: (($json.output || '').trim() || $('Buscar clientes em risco').all()[$itemIndex].json.message) }) }}",
         "options": {}
       }
     },
