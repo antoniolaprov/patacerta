@@ -66,6 +66,30 @@ services:
     ports:
       - "4200:80"
 
+  # Agent orchestration with n8n: the relationship agents are visual workflows
+  # (n8n/workflows) that call the PataCerta API as their tools. UI at :5678.
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:latest
+    ports:
+      - "5678:5678"
+    environment:
+      GENERIC_TIMEZONE: America/Recife
+      TZ: America/Recife
+      N8N_SECURE_COOKIE: "false"
+      N8N_BLOCK_ENV_ACCESS_IN_NODE: "false"
+      N8N_DIAGNOSTICS_ENABLED: "false"
+      # Where the workflows reach PataCerta (the apps running on the host in dev).
+      PATACERTA_API_URL: ${PATACERTA_API_URL:-http://host.docker.internal:3000/api}
+      PATACERTA_AI_URL: ${PATACERTA_AI_URL:-http://host.docker.internal:4000}
+      # Clinic account the agents act as (seed demo account; change in production).
+      PATACERTA_AGENT_EMAIL: ${PATACERTA_AGENT_EMAIL:-admin@patacerta.dev}
+      PATACERTA_AGENT_PASSWORD: ${PATACERTA_AGENT_PASSWORD:-patacerta123}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - n8n:/home/node/.n8n
+      - ./n8n/workflows:/workflows:ro
+
   # Optional: run the assistant fully offline with an open model.
   # docker compose --profile local-llm up, then set LLM_PROVIDER=ollama in .env
   ollama:
@@ -80,3 +104,4 @@ volumes:
   pgdata:
   models:
   ollama:
+  n8n:

@@ -13,6 +13,9 @@ export interface RetentionProposal {
   suggestedService: string;
   message: string;
   writtenBy: 'ia' | 'modelo';
+  species: string;
+  notes: string | null;
+  history: string;
 }
 
 const SERVICE_FOR: Record<string, string> = {
@@ -46,7 +49,7 @@ interface Upcoming {
  * writes a personal message for each one from the pet's history. The team
  * reviews and sends: the agent proposes, a person approves.
  */
-export async function runRetention(llm: LlmProvider, windowDays = 30, inactiveDays = 120, limit = 6) {
+export async function runRetention(llm: LlmProvider | null, windowDays = 30, inactiveDays = 120, limit = 6) {
   const { rows } = await pool.query(
     `WITH due AS (
        SELECT DISTINCT ON (r.pet_id, lower(r.title)) r.pet_id, r.title, r.type, r.next_due_date
@@ -127,19 +130,26 @@ export async function runRetention(llm: LlmProvider, windowDays = 30, inactiveDa
               : `Quer que a gente agende?`
           }`
         : `Olá, ${first}! Aqui é da PataCerta. Faz um tempo que não vemos ${pet} por aqui e sentimos falta! Que tal agendar ${c.suggestedService.toLowerCase()}?`;
-      const message = await writeMessage(llm, c.row, c.reasons, c.suggestedService).catch((err) => {
-        console.error('[retention]', (err as Error).message);
-        return null;
-      });
+      const history = await petHistory(c.row.id);
+      // Without a model (e.g. when n8n's agent writes the message) only the facts are returned.
+      const message = llm
+        ? await writeMessage(llm, c.row, c.reasons, c.suggestedService, history).catch((err) => {
+            console.error('[retention]', (err as Error).message);
+            return null;
+          })
+        : null;
       return {
         petId: c.row.id,
         petName: c.row.name,
+        species: c.row.species,
+        notes: c.row.notes,
         tutorId: c.row.tutor_id,
         tutorName: c.row.tutor,
         phone: c.row.phone,
         reasons: c.reasons,
         priority: c.priority,
         suggestedService: c.suggestedService,
+        history,
         message: message ?? fallback,
         writtenBy: message ? 'ia' : 'modelo',
       };
@@ -167,17 +177,22 @@ export async function latestOutreach(tutorId: string) {
   return r ? { id: r.id, petId: r.pet_id, petName: r.pet_name, message: r.message, createdAt: r.created_at } : null;
 }
 
+/** The pet's latest records as plain lines, for the model writing the message. */
+async function petHistory(petId: string) {
+  const { rows } = await pool.query(
+    `SELECT title, description, date FROM medical_records WHERE pet_id = $1 ORDER BY date DESC LIMIT 6`,
+    [petId],
+  );
+  return rows.map((r) => `- ${formatDate(r.date)} ${r.title}: ${r.description}`).join('\n');
+}
+
 async function writeMessage(
   llm: LlmProvider,
   pet: { id: string; name: string; species: string; notes: string | null; tutor: string },
   reasons: string[],
   service: string,
+  history: string,
 ) {
-  const { rows } = await pool.query(
-    `SELECT title, description, date FROM medical_records WHERE pet_id = $1 ORDER BY date DESC LIMIT 6`,
-    [pet.id],
-  );
-  const history = rows.map((r) => `- ${formatDate(r.date)} ${r.title}: ${r.description}`).join('\n');
   const res = await llm.complete({
     system: `Você escreve mensagens de WhatsApp da clínica PataCerta para tutores. Tom caloroso e pessoal, português do Brasil, no máximo 3 frases, sem emojis em excesso. Cite o pet pelo nome e o motivo do contato.
 Se houver mais de um cuidado pendente, ou se o pet já tiver uma visita marcada, proponha resolver tudo na mesma visita: é mais prático para o tutor e é o principal objetivo da mensagem.

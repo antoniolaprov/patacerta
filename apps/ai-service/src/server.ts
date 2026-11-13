@@ -108,6 +108,20 @@ async function main() {
     }
   });
 
+  // Facts only (no model): used by the n8n workflow, whose own AI agent writes the messages.
+  app.get('/agents/retention/candidates', requireAuth, async (req, res) => {
+    if (!isStaff(req.user!)) {
+      res.status(403).json({ message: 'Recurso exclusivo da equipe' });
+      return;
+    }
+    try {
+      res.json(await runRetention(null));
+    } catch (err) {
+      console.error('[retention]', err);
+      res.status(500).json({ message: 'Não foi possível listar os candidatos agora.' });
+    }
+  });
+
   const sendBody = z.object({
     petId: z.string().uuid(),
     tutorId: z.string().uuid(),
